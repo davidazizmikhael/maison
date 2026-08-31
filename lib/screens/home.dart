@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
+import '../services/backend.dart';
 import '../theme.dart';
 import 'add_entry.dart';
 import 'exports.dart';
@@ -43,7 +44,15 @@ class HomeScreen extends StatelessWidget {
             icon: const Icon(Icons.add_a_photo_outlined),
             label: const Text('Add', style: TextStyle(fontWeight: FontWeight.w800)),
           ),
-          body: ListView(
+          body: RefreshIndicator(
+            color: MaisonColors.accent,
+            onRefresh: () async {
+              final homeId = state.homeId;
+              if (!BackendConfig.enabled || homeId == null) return;
+              final (records, reminders) = await Backend.instance.fetchAll(homeId);
+              state.hydrate(newRecords: records, newReminders: reminders);
+            },
+            child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
             children: [
               _HealthCard(state: state),
@@ -68,23 +77,51 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ],
-              const SizedBox(height: 24),
-              const _SectionTitle('UP NEXT'),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 118,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: state.reminders.length,
-                  separatorBuilder: (context, index) => const SizedBox(width: 12),
-                  itemBuilder: (_, i) => _ReminderCard(reminder: state.reminders[i]),
+              if (state.reminders.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                const _SectionTitle('UP NEXT'),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 118,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: state.reminders.length,
+                    separatorBuilder: (context, index) => const SizedBox(width: 12),
+                    itemBuilder: (_, i) => _ReminderCard(reminder: state.reminders[i]),
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 24),
               const _SectionTitle('HOUSE TIMELINE'),
               const SizedBox(height: 6),
-              ...state.records.map((r) => _RecordTile(record: r)),
+              if (state.records.isEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: MaisonColors.card,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: MaisonColors.line),
+                  ),
+                  child: const Column(
+                    children: [
+                      Text('📸', style: TextStyle(fontSize: 34)),
+                      SizedBox(height: 10),
+                      Text('Your logbook is empty',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                      SizedBox(height: 6),
+                      Text(
+                        'Walk the house and snap your first nameplate — the furnace is a great start.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: MaisonColors.inkSoft, height: 1.45),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...state.records.map((r) => _RecordTile(record: r)),
             ],
+            ),
           ),
         );
       },

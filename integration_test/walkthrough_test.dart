@@ -48,8 +48,10 @@ void main() {
     await shot(tester, '03c-onboarding-how-it-works');
     await tester.tap(find.text('Start my home profile'));
     await tester.pumpAndSettle();
+    // Live mode creates the home over the network — wait for the dashboard.
+    await waitFor(tester, find.text('Add'));
 
-    // 2 — Home dashboard (seeded demo data)
+    // 2 — Home dashboard
     await shot(tester, '04-home-dashboard');
 
     // 3 — Add: scan a nameplate
@@ -71,6 +73,8 @@ void main() {
     await shot(tester, '08b-fix-details-editing');
     await tester.tap(find.text('Save my corrections'));
     await tester.pumpAndSettle();
+    // Saving hits the database in live mode — wait for the timeline to return.
+    await waitFor(tester, find.textContaining('Lennox ML296V'));
     await shot(tester, '09-home-after-save');
 
     // 5 — Record detail
@@ -91,6 +95,7 @@ void main() {
     await shot(tester, '12-confirm-note-record');
     await tester.tap(find.text('Looks right — save it'));
     await tester.pumpAndSettle();
+    await waitFor(tester, find.text('Add'));
 
     // 7 — Exports
     await tester.tap(find.byIcon(Icons.ios_share));

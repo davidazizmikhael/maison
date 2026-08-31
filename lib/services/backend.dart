@@ -28,6 +28,10 @@ Future<void> initBackend() async {
 /// `SupabaseBackend` is the real thing.
 abstract class Backend {
   Future<void> signInAnonymously();
+
+  /// The user's home from a previous session, or null if they never onboarded.
+  Future<({String id, String address, HomeProfile? profile})?> existingHome();
+
   Future<String> upsertHome({required String address, HomeProfile? profile});
   Future<ParseResult> parseEntry(CaptureMode mode,
       {String? noteText, Uint8List? imageBytes, String mediaType});
@@ -42,6 +46,9 @@ abstract class Backend {
 class MockBackend implements Backend {
   @override
   Future<void> signInAnonymously() async {}
+
+  @override
+  Future<({String id, String address, HomeProfile? profile})?> existingHome() async => null;
 
   @override
   Future<String> upsertHome({required String address, HomeProfile? profile}) async => 'demo-home';
@@ -72,6 +79,27 @@ class SupabaseBackend implements Backend {
     if (_db.auth.currentSession == null) {
       await _db.auth.signInAnonymously();
     }
+  }
+
+  @override
+  Future<({String id, String address, HomeProfile? profile})?> existingHome() async {
+    final rows = await _db.from('homes').select().order('created_at').limit(1);
+    if (rows.isEmpty) return null;
+    final row = rows.first;
+    final p = row['profile'] as Map<String, dynamic>?;
+    return (
+      id: row['id'] as String,
+      address: row['address'] as String,
+      profile: p == null
+          ? null
+          : HomeProfile(
+              type: (p['type'] as String?) ?? 'House',
+              bedrooms: (p['bedrooms'] as num?)?.toInt() ?? 3,
+              bathrooms: (p['bathrooms'] as num?)?.toDouble() ?? 1,
+              garage: (p['garage'] as bool?) ?? false,
+              basement: (p['basement'] as bool?) ?? false,
+            ),
+    );
   }
 
   @override
@@ -173,6 +201,8 @@ class SupabaseBackend implements Backend {
         'seasonal': rem.seasonal,
       });
     }
+    // Optimistic local update so the timeline reflects the save immediately.
+    AppState.instance.addParsed(result);
   }
 
   @override

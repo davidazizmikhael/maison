@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models.dart';
+import '../services/backend.dart';
 import '../theme.dart';
 
 /// Entry point: the "+ Add" bottom sheet with the three capture modes.
@@ -234,25 +235,51 @@ class ParsingScreen extends StatefulWidget {
 }
 
 class _ParsingScreenState extends State<ParsingScreen> {
-  late final ParseResult _result;
+  static const _stepsFor = {
+    CaptureMode.nameplate: ['Reading nameplate…', 'Identifying model…', 'Finding the manual…', 'Checking recalls…'],
+    CaptureMode.receipt: ['Scanning receipt…', 'Extracting items & prices…', 'Reading warranty terms…', 'Tracking return window…'],
+    CaptureMode.note: ['Reading your note…', 'Extracting the details…', 'Filing under the right room…'],
+  };
+
+  List<String> get _steps => _stepsFor[widget.mode]!;
+  ParseResult? _result;
+  bool _animationDone = false;
+  bool _navigated = false;
   int _step = 0;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _result = MockAi.parse(widget.mode, noteText: widget.noteText);
+    // The real work: demo mode answers locally, live mode calls the
+    // parse-entry edge function. The step animation runs alongside it.
+    Backend.instance.parseEntry(widget.mode, noteText: widget.noteText).then((r) {
+      _result = r;
+      _maybeFinish();
+    }).catchError((e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Couldn\'t parse that — check your connection and try again. ($e)')));
+      Navigator.of(context).pop();
+    });
     _timer = Timer.periodic(const Duration(milliseconds: 800), (t) {
-      if (_step < _result.steps.length - 1) {
+      if (_step < _steps.length - 1) {
         setState(() => _step++);
       } else {
         t.cancel();
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => ConfirmScreen(result: _result)));
-          }
-        });
+        _animationDone = true;
+        _maybeFinish();
+      }
+    });
+  }
+
+  void _maybeFinish() {
+    if (_navigated || !mounted || _result == null || !_animationDone) return;
+    _navigated = true;
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => ConfirmScreen(result: _result!)));
       }
     });
   }
@@ -281,7 +308,7 @@ class _ParsingScreenState extends State<ParsingScreen> {
                 ),
               ),
               const SizedBox(height: 36),
-              ...List.generate(_result.steps.length, (i) {
+              ...List.generate(_steps.length, (i) {
                 final done = i < _step;
                 final active = i == _step;
                 return AnimatedOpacity(
@@ -298,7 +325,7 @@ class _ParsingScreenState extends State<ParsingScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(_result.steps[i],
+                          child: Text(_steps[i],
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -368,12 +395,51 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     );
   }
 
-  void _save() {
-    AppState.instance.addParsed(ParseResult(
-      record: _correctedRecord(),
-      reminders: result.reminders,
-      steps: result.steps,
-    ));
+  bool _saving = false;
+
+  /// Optional user-chosen follow-up date, saved as an extra reminder.
+  DateTime? _remindOn;
+
+  Future<void> _pickRemindDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _remindOn ?? now.add(const Duration(days: 30)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365 * 5)),
+      helpText: 'Remind me about this',
+    );
+    if (picked != null) setState(() => _remindOn = picked);
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final record = _correctedRecord();
+    try {
+      await Backend.instance.saveRecord(
+        AppState.instance.homeId ?? 'demo-home',
+        ParseResult(
+          record: record,
+          reminders: [
+            ...result.reminders,
+            if (_remindOn != null)
+              Reminder(
+                title: record.title,
+                detail: 'Follow-up you set when saving this',
+                due: _remindOn!,
+              ),
+          ],
+          steps: result.steps,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Couldn\'t save — try again. ($e)')));
+      return;
+    }
+    if (!mounted) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_editing
@@ -516,11 +582,47 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 14),
+          Container(
+            decoration: BoxDecoration(
+              color: MaisonColors.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: MaisonColors.line),
+            ),
+            child: ListTile(
+              onTap: _pickRemindDate,
+              leading: const Text('🗓️', style: TextStyle(fontSize: 22)),
+              title: Text(
+                _remindOn == null ? 'Remind me about this' : 'Reminder on ${_fmtDate(_remindOn!)}',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+              ),
+              subtitle: Text(
+                _remindOn == null
+                    ? 'Optional — pick a follow-up date'
+                    : 'Will appear in Up next',
+                style: const TextStyle(fontSize: 12.5, color: MaisonColors.inkSoft),
+              ),
+              trailing: _remindOn == null
+                  ? const Icon(Icons.add, color: MaisonColors.accentDeep)
+                  : IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: MaisonColors.inkSoft),
+                      tooltip: 'Remove reminder',
+                      onPressed: () => setState(() => _remindOn = null),
+                    ),
+            ),
+          ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            icon: const Icon(Icons.check),
-            label: Text(_editing ? 'Save my corrections' : 'Looks right — save it'),
-            onPressed: _save,
+            icon: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                : const Icon(Icons.check),
+            label: Text(_saving
+                ? 'Saving…'
+                : (_editing ? 'Save my corrections' : 'Looks right — save it')),
+            onPressed: _saving ? null : _save,
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(

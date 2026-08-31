@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/onboarding.dart';
+import 'screens/bootstrap.dart';
 import 'services/backend.dart';
 import 'theme.dart';
 
@@ -18,7 +18,7 @@ class MaisonApp extends StatelessWidget {
       title: 'Maison',
       debugShowCheckedModeBanner: false,
       theme: maisonTheme(),
-      home: const OnboardingScreen(),
+      home: const BootstrapScreen(),
     );
   }
 }

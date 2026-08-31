@@ -127,8 +127,23 @@ class AppState extends ChangeNotifier {
   String address = '214 Rue Clark, Montréal';
   HomeProfile? profile;
 
+  /// Row id of the home in Supabase; null in demo mode until onboarding ends.
+  String? homeId;
+
   void setProfile(HomeProfile p) {
     profile = p;
+    notifyListeners();
+  }
+
+  /// Replace local state with what the backend returned.
+  void hydrate({required List<HomeRecord> newRecords, required List<Reminder> newReminders}) {
+    records
+      ..clear()
+      ..addAll(newRecords);
+    reminders
+      ..clear()
+      ..addAll(newReminders)
+      ..sort((a, b) => a.due.compareTo(b.due));
     notifyListeners();
   }
   final List<HomeRecord> records = [];

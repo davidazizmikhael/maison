@@ -98,7 +98,9 @@ function instructionFor(mode: string, today: string): string {
         `Estimate warranty_until from any stated warranty terms and return_by from the store's return policy if printed.`;
     default:
       return `${base} The input is a free-text note the homeowner typed. kind is usually "service". ` +
-        `Extract what was done into title, parts/details into subtitle, price into cost, who did it into vendor.`;
+        `Extract what was done into title, parts/details into subtitle, price into cost, who did it into vendor. ` +
+        `If the note mentions a deadline, future date, or follow-up intent ("due Oct 15", "remind me next month", ` +
+        `"needs another look in the spring"), create a reminder with that due_on date resolved against today's date.`;
   }
 }
 
