@@ -118,6 +118,15 @@ void main() {
     await waitFor(tester, find.text('Add'));
     expect(find.text('Bathroom faucet repair'), findsNothing);
 
+    // 6c — Complete a reminder from the Up next rail (first card: the rail is
+    // horizontal and lazy, so off-screen cards aren't built)
+    await tester.tap(find.text('Furnace filter due'));
+    await tester.pumpAndSettle();
+    await shot(tester, '12c-reminder-actions');
+    await tester.tap(find.text('Mark as done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Furnace filter due'), findsNothing);
+
     // 7 — Exports
     await tester.tap(find.byIcon(Icons.ios_share));
     await tester.pumpAndSettle();

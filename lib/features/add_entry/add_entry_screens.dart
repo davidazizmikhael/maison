@@ -721,7 +721,14 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       listener: (context, state) {
         switch (state) {
           case AddEntrySaved(:final saved, :final edited):
-            context.read<TimelineCubit>().addParsed(saved);
+            final session = context.read<SessionCubit>().state;
+            final liveHomeId = session is SessionReady ? session.homeId : null;
+            if (BackendConfig.enabled && liveHomeId != null) {
+              // Reload so records and reminders carry their database ids.
+              context.read<TimelineCubit>().load(liveHomeId);
+            } else {
+              context.read<TimelineCubit>().addParsed(saved);
+            }
             Navigator.of(context).popUntil((route) => route.isFirst);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(edited

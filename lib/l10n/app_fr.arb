@@ -100,7 +100,7 @@
   "historyBody": "Tout l'entretien et les améliorations de votre maison — un gage de confiance qui ajoute de la valeur à la revente.",
   "historyCta": "Générer l'historique",
   "pdfReady": "📄  PDF prêt",
-  "pdfBody": "{what} généré depuis votre historique.\n\nDans l'application réelle, la feuille de partage iOS s'ouvre — envoyez-le à votre assureur, courtier ou au fabricant.",
+  "pdfBody": "{what} est prêt — partagez-le ou enregistrez-le dans Fichiers.",
   "niceButton": "Super",
   "obWelcomeTitle": "Photographiez.\nMaison classe.\nPour toujours.",
   "obWelcomeBody": "Chaque appareil, reçu, réparation et garantie de votre maison — photographié une fois, organisé pour de bon.",
@@ -131,5 +131,16 @@
   "deleteConfirmBody": "Il sera retiré définitivement de votre carnet, avec sa photo et ses rappels.",
   "deleteButton": "Supprimer",
   "cancelButton": "Annuler",
-  "deletedSnack": "Enregistrement supprimé"
+  "deletedSnack": "Enregistrement supprimé",
+  "shareButton": "Partager",
+  "pickItemTitle": "Quel article ?",
+  "noItemsSnack": "Rien à exporter — ajoutez d'abord un enregistrement.",
+  "generatingLabel": "Génération…",
+  "pdfGeneratedBy": "Généré par Maison — {date}",
+  "pdfTotalValue": "Valeur totale documentée",
+  "pdfAddedOn": "Ajouté",
+  "markDone": "Marquer comme faite",
+  "snoozeWeek": "Reporter d'une semaine",
+  "reminderDoneSnack": "Rappel terminé ✓",
+  "reminderSnoozedSnack": "Reporté au {date}"
 }

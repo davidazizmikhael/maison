@@ -43,6 +43,12 @@ abstract class Backend {
 
   /// Deletes the record row (reminders cascade) and its stored photo.
   Future<void> deleteRecord(HomeRecord record);
+
+  /// Raw photo bytes for embedding into PDFs (null in demo mode).
+  Future<Uint8List?> photoBytes(String path);
+
+  Future<void> completeReminder(String reminderId);
+  Future<void> snoozeReminder(String reminderId, DateTime newDue);
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId);
 
   static Backend get instance =>
@@ -80,6 +86,15 @@ class MockBackend implements Backend {
   Future<void> deleteRecord(HomeRecord record) async {
     // Demo mode: the TimelineCubit owns the state.
   }
+
+  @override
+  Future<Uint8List?> photoBytes(String path) async => null;
+
+  @override
+  Future<void> completeReminder(String reminderId) async {}
+
+  @override
+  Future<void> snoozeReminder(String reminderId, DateTime newDue) async {}
 
   @override
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId) async =>
@@ -235,9 +250,39 @@ class SupabaseBackend implements Backend {
     }
   }
 
+  static final _urlCache = <String, (String, DateTime)>{};
+
   @override
-  Future<String?> photoUrl(String path) async =>
-      _db.storage.from('captures').createSignedUrl(path, 3600);
+  Future<String?> photoUrl(String path) async {
+    final cached = _urlCache[path];
+    if (cached != null && cached.$2.isAfter(DateTime.now())) return cached.$1;
+    final url = await _db.storage.from('captures').createSignedUrl(path, 3600);
+    _urlCache[path] = (url, DateTime.now().add(const Duration(minutes: 50)));
+    return url;
+  }
+
+  @override
+  Future<Uint8List?> photoBytes(String path) async {
+    try {
+      return await _db.storage.from('captures').download(path);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> completeReminder(String reminderId) async {
+    await _db
+        .from('reminders')
+        .update({'done_at': DateTime.now().toUtc().toIso8601String()}).eq('id', reminderId);
+  }
+
+  @override
+  Future<void> snoozeReminder(String reminderId, DateTime newDue) async {
+    await _db
+        .from('reminders')
+        .update({'due_on': newDue.toIso8601String().substring(0, 10)}).eq('id', reminderId);
+  }
 
   @override
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId) async {
@@ -274,6 +319,7 @@ class SupabaseBackend implements Backend {
     final reminders = [
       for (final r in reminderRows)
         Reminder(
+          id: r['id'] as String,
           title: r['title'] as String,
           detail: (r['detail'] as String?) ?? '',
           due: _date(r['due_on'])!,

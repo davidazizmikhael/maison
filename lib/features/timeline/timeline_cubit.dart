@@ -59,6 +59,28 @@ class TimelineCubit extends Cubit<TimelineState> {
     }
   }
 
+  Future<void> completeReminder(Reminder reminder, {String? homeId}) async {
+    if (BackendConfig.enabled && reminder.id != null) {
+      await _backend.completeReminder(reminder.id!);
+      if (homeId != null) await load(homeId);
+    } else {
+      _emitSynced(state.records, state.reminders.where((r) => !identical(r, reminder)).toList());
+    }
+  }
+
+  Future<void> snoozeReminder(Reminder reminder, {String? homeId}) async {
+    final newDue = reminder.due.add(const Duration(days: 7));
+    if (BackendConfig.enabled && reminder.id != null) {
+      await _backend.snoozeReminder(reminder.id!, newDue);
+      if (homeId != null) await load(homeId);
+    } else {
+      _emitSynced(state.records, [
+        for (final r in state.reminders)
+          identical(r, reminder) ? reminder.copyWith(due: newDue) : r,
+      ]);
+    }
+  }
+
   /// Demo-mode canned data, shaped by the onboarding profile.
   void seedDemo(HomeProfile? profile) {
     if (state.records.isNotEmpty) return;

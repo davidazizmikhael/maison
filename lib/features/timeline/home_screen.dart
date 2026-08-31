@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
+import '../../data/backend.dart';
 import '../../data/models.dart';
 import '../add_entry/add_entry_screens.dart';
 import '../exports/exports_screen.dart';
@@ -98,7 +99,10 @@ class HomeScreen extends StatelessWidget {
                     itemCount: state.reminders.length,
                     clipBehavior: Clip.none,
                     separatorBuilder: (context, index) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => _ReminderCard(reminder: state.reminders[i]),
+                    itemBuilder: (_, i) => _ReminderCard(
+                        reminder: state.reminders[i],
+                        onTap: () =>
+                            _showReminderActions(context, state.reminders[i], homeId)),
                   ),
                 ),
               ],
@@ -217,14 +221,70 @@ class _HealthCard extends StatelessWidget {
   }
 }
 
+void _showReminderActions(BuildContext context, Reminder reminder, String? homeId) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: context.mc.paper,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Text(reminder.title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          ),
+          ListTile(
+            leading: Icon(Icons.check_circle_outline, color: sheetContext.mc.green),
+            title: Text(sheetContext.l10n.markDone,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            onTap: () async {
+              Navigator.of(sheetContext).pop();
+              await context.read<TimelineCubit>().completeReminder(reminder, homeId: homeId);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(context.l10n.reminderDoneSnack),
+                    duration: const Duration(seconds: 2)));
+              }
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.snooze_outlined, color: sheetContext.mc.navy),
+            title: Text(sheetContext.l10n.snoozeWeek,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            onTap: () async {
+              Navigator.of(sheetContext).pop();
+              final newDue = reminder.due.add(const Duration(days: 7));
+              await context.read<TimelineCubit>().snoozeReminder(reminder, homeId: homeId);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(context.l10n.reminderSnoozedSnack(
+                        '${newDue.year}-${newDue.month.toString().padLeft(2, '0')}-${newDue.day.toString().padLeft(2, '0')}')),
+                    duration: const Duration(seconds: 2)));
+              }
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+}
+
 class _ReminderCard extends StatelessWidget {
-  const _ReminderCard({required this.reminder});
+  const _ReminderCard({required this.reminder, required this.onTap});
   final Reminder reminder;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final urgent = reminder.daysLeft <= 14;
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       width: 210,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -264,6 +324,7 @@ class _ReminderCard extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: context.mc.inkSoft, height: 1.35)),
         ],
       ),
+      ),
     );
   }
 }
@@ -285,16 +346,35 @@ class _RecordTile extends StatelessWidget {
         onTap: () => Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => RecordDetailScreen(record: record))),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        leading: Container(
-          width: 46,
-          height: 46,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: context.mc.paper,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(record.emoji, style: const TextStyle(fontSize: 22)),
-        ),
+        leading: record.photoPath != null
+            ? FutureBuilder<String?>(
+                future: Backend.instance.photoUrl(record.photoPath!),
+                builder: (context, snapshot) {
+                  final url = snapshot.data;
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 46,
+                      height: 46,
+                      child: url == null
+                          ? Container(color: context.mc.paper)
+                          : Image.network(url, fit: BoxFit.cover,
+                              errorBuilder: (context, error, stack) =>
+                                  Container(color: context.mc.paper)),
+                    ),
+                  );
+                },
+              )
+            : Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: context.mc.paper,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(record.emoji, style: const TextStyle(fontSize: 22)),
+              ),
         title: Text(record.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

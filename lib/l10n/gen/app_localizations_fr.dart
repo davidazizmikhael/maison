@@ -348,7 +348,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String pdfBody(String what) {
-    return '$what généré depuis votre historique.\n\nDans l\'application réelle, la feuille de partage iOS s\'ouvre — envoyez-le à votre assureur, courtier ou au fabricant.';
+    return '$what est prêt — partagez-le ou enregistrez-le dans Fichiers.';
   }
 
   @override
@@ -453,4 +453,42 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deletedSnack => 'Enregistrement supprimé';
+
+  @override
+  String get shareButton => 'Partager';
+
+  @override
+  String get pickItemTitle => 'Quel article ?';
+
+  @override
+  String get noItemsSnack =>
+      'Rien à exporter — ajoutez d\'abord un enregistrement.';
+
+  @override
+  String get generatingLabel => 'Génération…';
+
+  @override
+  String pdfGeneratedBy(String date) {
+    return 'Généré par Maison — $date';
+  }
+
+  @override
+  String get pdfTotalValue => 'Valeur totale documentée';
+
+  @override
+  String get pdfAddedOn => 'Ajouté';
+
+  @override
+  String get markDone => 'Marquer comme faite';
+
+  @override
+  String get snoozeWeek => 'Reporter d\'une semaine';
+
+  @override
+  String get reminderDoneSnack => 'Rappel terminé ✓';
+
+  @override
+  String reminderSnoozedSnack(String date) {
+    return 'Reporté au $date';
+  }
 }

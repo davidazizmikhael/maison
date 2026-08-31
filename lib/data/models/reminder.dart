@@ -1,5 +1,8 @@
 class Reminder {
-  Reminder({required this.title, required this.detail, required this.due, this.seasonal = false});
+  Reminder({this.id, required this.title, required this.detail, required this.due, this.seasonal = false});
+
+  /// Database row id (null in demo mode).
+  final String? id;
   final String title;
   final String detail;
   final DateTime due;
@@ -13,6 +16,9 @@ class Reminder {
         .difference(DateTime(now.year, now.month, now.day))
         .inDays;
   }
+
+  Reminder copyWith({DateTime? due}) =>
+      Reminder(id: id, title: title, detail: detail, due: due ?? this.due, seasonal: seasonal);
 
   String get dueLabel => switch (daysLeft) {
         < -1 => 'OVERDUE ${-daysLeft} DAYS',
