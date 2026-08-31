@@ -297,10 +297,14 @@ class _ParsingScreenState extends State<ParsingScreen> {
                           color: done ? MaisonColors.green : MaisonColors.accent,
                         ),
                         const SizedBox(width: 12),
-                        Text(_result.steps[i],
-                            style: TextStyle(
-                                fontSize: 16.5,
-                                fontWeight: active ? FontWeight.w800 : FontWeight.w500)),
+                        Expanded(
+                          child: Text(_result.steps[i],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 16.5,
+                                  fontWeight: active ? FontWeight.w800 : FontWeight.w500)),
+                        ),
                       ],
                     ),
                   ),

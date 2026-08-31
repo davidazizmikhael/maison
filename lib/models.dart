@@ -271,7 +271,7 @@ class MockAi {
         final costMatch = RegExp(r'\$\s?([\d,]+(?:\.\d{1,2})?)').firstMatch(text);
         final cost = costMatch == null ? null : double.tryParse(costMatch.group(1)!.replaceAll(',', ''));
         return ParseResult(
-          steps: ['Reading your note…', 'Extracting what, where, how much…', 'Filing under the right room…'],
+          steps: ['Reading your note…', 'Extracting the details…', 'Filing under the right room…'],
           record: HomeRecord(
             kind: RecordKind.service,
             title: 'Bathroom faucet repair',
