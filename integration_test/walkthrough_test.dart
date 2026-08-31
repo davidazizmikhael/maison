@@ -74,12 +74,14 @@ void main() {
     await tester.tap(find.text('Save my corrections'));
     await tester.pumpAndSettle();
     // Saving hits the database in live mode — wait for the timeline to return.
-    await waitFor(tester, find.textContaining('Lennox ML296V'));
+    await waitFor(tester, find.text('Furnace — Lennox ML296V'));
     await shot(tester, '09-home-after-save');
 
-    // 5 — Record detail
-    await tester.tap(find.textContaining('Lennox ML296V').first);
+    // 5 — Record detail (exact title: 'textContaining' would also match the
+    // reminder card's subtitle, which isn't tappable)
+    await tester.tap(find.text('Furnace — Lennox ML296V'));
     await tester.pumpAndSettle();
+    await waitFor(tester, find.text('View manual'));
     await shot(tester, '10-record-detail');
     await tester.pageBack();
     await tester.pumpAndSettle();

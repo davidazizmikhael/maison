@@ -3,7 +3,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
-import '../models.dart';
+import 'models.dart';
 
 /// Local reminder notifications. Everything is scheduled on-device in the
 /// device's timezone — a reminder means "9 AM where the user lives". No

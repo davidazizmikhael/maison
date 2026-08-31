@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import '../models.dart';
-import '../services/backend.dart';
-import '../theme.dart';
-import 'home.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../core/theme.dart';
+import '../../data/backend.dart';
+import '../../data/models.dart';
+import '../session/session_cubit.dart';
+import '../timeline/home_screen.dart';
+import '../timeline/timeline_cubit.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,7 +21,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _placeController = TextEditingController(
       text: 'Duplex, 3 bedrooms, 1.5 bathrooms, garage, unfinished basement');
   int _page = 0;
-  bool _creating = false;
 
   @override
   void dispose() {
@@ -27,40 +30,44 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  Future<void> _next() async {
+  void _next() {
     if (_page < 3) {
       _controller.nextPage(duration: const Duration(milliseconds: 350), curve: Curves.easeOutCubic);
       return;
     }
-    final state = AppState.instance;
-    state.address = _addressController.text.trim().isEmpty
+    final address = _addressController.text.trim().isEmpty
         ? '214 Rue Clark, Montréal'
         : _addressController.text.trim();
-    // If the user skipped the "structure it" tap, parse their text silently.
-    state.profile ??= HomeProfile.parse(_placeController.text);
-
-    if (BackendConfig.enabled) {
-      setState(() => _creating = true);
-      try {
-        final backend = Backend.instance;
-        await backend.signInAnonymously();
-        state.homeId = await backend.upsertHome(address: state.address, profile: state.profile);
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _creating = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Couldn\'t create your home — check your connection. ($e)')));
-        return;
-      }
-    } else {
-      state.seedDemoData();
-    }
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    // Parses the description whether or not the user tapped "Structure it".
+    final profile = HomeProfile.parse(_placeController.text);
+    context.read<SessionCubit>().completeOnboarding(address: address, profile: profile);
+    // Navigation happens in the BlocListener below once the session is ready.
   }
 
   @override
   Widget build(BuildContext context) {
+    return BlocListener<SessionCubit, SessionState>(
+      listener: (context, state) {
+        switch (state) {
+          case SessionReady(:final profile):
+            if (!BackendConfig.enabled) {
+              context.read<TimelineCubit>().seedDemo(profile);
+            }
+            Navigator.of(context)
+                .pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+          case SessionError(:final message, duringOnboarding: true):
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Couldn\'t create your home — check your connection. ($message)')));
+          case _:
+            break;
+        }
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
+    final creating = context.watch<SessionCubit>().state is SessionCreatingHome;
     return Scaffold(
       backgroundColor: MaisonColors.ink,
       body: SafeArea(
@@ -101,8 +108,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _creating ? null : _next,
-                      child: Text(_creating
+                      onPressed: creating ? null : _next,
+                      child: Text(creating
                           ? 'Setting up your home…'
                           : (_page == 3 ? 'Start my home profile' : 'Continue')),
                     ),
@@ -202,7 +209,6 @@ class _DescribePlacePageState extends State<_DescribePlacePage> {
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     final profile = HomeProfile.parse(widget.controller.text);
-    AppState.instance.setProfile(profile);
     setState(() {
       _thinking = false;
       _parsed = profile;

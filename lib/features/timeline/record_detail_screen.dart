@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models.dart';
-import '../theme.dart';
+import '../../data/models.dart';
+import '../../core/theme.dart';
 
 class RecordDetailScreen extends StatelessWidget {
   const RecordDetailScreen({super.key, required this.record});

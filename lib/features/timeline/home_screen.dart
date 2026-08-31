@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
-import '../models.dart';
-import '../services/backend.dart';
-import '../theme.dart';
-import 'add_entry.dart';
-import 'exports.dart';
-import 'record_detail.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../core/theme.dart';
+import '../../data/models.dart';
+import '../add_entry/add_entry_screens.dart';
+import '../exports/exports_screen.dart';
+import '../session/session_cubit.dart';
+import 'record_detail_screen.dart';
+import 'timeline_cubit.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final state = AppState.instance;
-    return AnimatedBuilder(
-      animation: state,
-      builder: (context, _) {
+    final session = context.watch<SessionCubit>().state;
+    final address = session is SessionReady ? session.address : '';
+    final profile = session is SessionReady ? session.profile : null;
+    final homeId = session is SessionReady ? session.homeId : null;
+    return BlocBuilder<TimelineCubit, TimelineState>(
+      builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
             title: Column(
@@ -26,7 +31,7 @@ class HomeScreen extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         letterSpacing: 2.5,
                         color: MaisonColors.accentDeep)),
-                Text(state.address, style: const TextStyle(fontSize: 17)),
+                Text(address, style: const TextStyle(fontSize: 17)),
               ],
             ),
             actions: [
@@ -47,16 +52,14 @@ class HomeScreen extends StatelessWidget {
           body: RefreshIndicator(
             color: MaisonColors.accent,
             onRefresh: () async {
-              final homeId = state.homeId;
-              if (!BackendConfig.enabled || homeId == null) return;
-              final (records, reminders) = await Backend.instance.fetchAll(homeId);
-              state.hydrate(newRecords: records, newReminders: reminders);
+              if (homeId == null) return;
+              await context.read<TimelineCubit>().load(homeId);
             },
             child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
             children: [
               _HealthCard(state: state),
-              if (state.profile != null) ...[
+              if (profile != null) ...[
                 const SizedBox(height: 24),
                 const _SectionTitle('YOUR PLACE'),
                 const SizedBox(height: 10),
@@ -64,7 +67,7 @@ class HomeScreen extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    ...state.profile!.chips.map((c) => Container(
+                    ...profile.chips.map((c) => Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                           decoration: BoxDecoration(
                             color: MaisonColors.card,
@@ -145,7 +148,7 @@ class _SectionTitle extends StatelessWidget {
 
 class _HealthCard extends StatelessWidget {
   const _HealthCard({required this.state});
-  final AppState state;
+  final TimelineState state;
 
   Widget _stat(String value, String label) {
     return Expanded(

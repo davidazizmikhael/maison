@@ -1,8 +1,23 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../models.dart';
-import '../services/backend.dart';
-import '../theme.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../core/theme.dart';
+import '../../data/backend.dart';
+import '../../data/models.dart';
+import '../session/session_cubit.dart';
+import '../timeline/timeline_cubit.dart';
+import 'add_entry_cubit.dart';
+
+/// Route that owns one AddEntryCubit for the parse → confirm → save journey.
+Route<void> parsingRoute(CaptureMode mode, {String? noteText}) {
+  return MaterialPageRoute(
+    builder: (_) => BlocProvider(
+      create: (_) => AddEntryCubit(Backend.instance)..parse(mode, noteText: noteText),
+      child: ParsingScreen(mode: mode),
+    ),
+  );
+}
 
 /// Entry point: the "+ Add" bottom sheet with the three capture modes.
 void showAddSheet(BuildContext context) {
@@ -137,11 +152,7 @@ class FakeCameraScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 44, top: 8),
             child: GestureDetector(
               key: const Key('capture'),
-              onTap: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => ParsingScreen(mode: mode)),
-                );
-              },
+              onTap: () => Navigator.of(context).pushReplacement(parsingRoute(mode)),
               child: Container(
                 width: 76,
                 height: 76,
@@ -210,10 +221,8 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
               child: FilledButton.icon(
                 icon: const Icon(Icons.auto_awesome),
                 label: const Text('Let Maison file it'),
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(MaterialPageRoute(
-                      builder: (_) => ParsingScreen(mode: CaptureMode.note, noteText: _controller.text)));
-                },
+                onPressed: () => Navigator.of(context)
+                    .pushReplacement(parsingRoute(CaptureMode.note, noteText: _controller.text)),
               ),
             ),
           ],
@@ -223,12 +232,11 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
   }
 }
 
-/// The fake "AI is working" screen: animated step-by-step progress,
-/// then pushes the confirmation screen with the parsed record.
+/// The "AI is working" screen: animated step-by-step progress while the
+/// AddEntryCubit parses; moves to confirmation when both are done.
 class ParsingScreen extends StatefulWidget {
-  const ParsingScreen({super.key, required this.mode, this.noteText});
+  const ParsingScreen({super.key, required this.mode});
   final CaptureMode mode;
-  final String? noteText;
 
   @override
   State<ParsingScreen> createState() => _ParsingScreenState();
@@ -242,7 +250,6 @@ class _ParsingScreenState extends State<ParsingScreen> {
   };
 
   List<String> get _steps => _stepsFor[widget.mode]!;
-  ParseResult? _result;
   bool _animationDone = false;
   bool _navigated = false;
   int _step = 0;
@@ -251,17 +258,6 @@ class _ParsingScreenState extends State<ParsingScreen> {
   @override
   void initState() {
     super.initState();
-    // The real work: demo mode answers locally, live mode calls the
-    // parse-entry edge function. The step animation runs alongside it.
-    Backend.instance.parseEntry(widget.mode, noteText: widget.noteText).then((r) {
-      _result = r;
-      _maybeFinish();
-    }).catchError((e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Couldn\'t parse that — check your connection and try again. ($e)')));
-      Navigator.of(context).pop();
-    });
     _timer = Timer.periodic(const Duration(milliseconds: 800), (t) {
       if (_step < _steps.length - 1) {
         setState(() => _step++);
@@ -274,12 +270,18 @@ class _ParsingScreenState extends State<ParsingScreen> {
   }
 
   void _maybeFinish() {
-    if (_navigated || !mounted || _result == null || !_animationDone) return;
+    if (_navigated || !mounted || !_animationDone) return;
+    final state = context.read<AddEntryCubit>().state;
+    if (state is! AddEntryParsed) return;
     _navigated = true;
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => ConfirmScreen(result: _result!)));
+        // pushReplacement disposes this route's cubit, so the confirm screen
+        // gets its own — the parsed result travels by constructor.
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+            builder: (_) => BlocProvider(
+                create: (_) => AddEntryCubit(Backend.instance),
+                child: ConfirmScreen(result: state.result))));
       }
     });
   }
@@ -292,6 +294,23 @@ class _ParsingScreenState extends State<ParsingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocListener<AddEntryCubit, AddEntryState>(
+      listener: (context, state) {
+        switch (state) {
+          case AddEntryParsed():
+            _maybeFinish();
+          case AddEntryError(:final message):
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+            Navigator.of(context).pop();
+          case _:
+            break;
+        }
+      },
+      child: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     return Scaffold(
       body: Center(
         child: Padding(
@@ -395,8 +414,6 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     );
   }
 
-  bool _saving = false;
-
   /// Optional user-chosen follow-up date, saved as an extra reminder.
   DateTime? _remindOn;
 
@@ -412,40 +429,27 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     if (picked != null) setState(() => _remindOn = picked);
   }
 
-  Future<void> _save() async {
-    setState(() => _saving = true);
+  void _save() {
     final record = _correctedRecord();
-    try {
-      await Backend.instance.saveRecord(
-        AppState.instance.homeId ?? 'demo-home',
-        ParseResult(
-          record: record,
-          reminders: [
-            ...result.reminders,
-            if (_remindOn != null)
-              Reminder(
-                title: record.title,
-                detail: 'Follow-up you set when saving this',
-                due: _remindOn!,
-              ),
-          ],
-          steps: result.steps,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Couldn\'t save — try again. ($e)')));
-      return;
-    }
-    if (!mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(_editing
-            ? 'Saved with your corrections ✓'
-            : 'Saved to your house timeline ✓'),
-        duration: const Duration(seconds: 2)));
+    final session = context.read<SessionCubit>().state;
+    final homeId = session is SessionReady ? (session.homeId ?? 'demo-home') : 'demo-home';
+    context.read<AddEntryCubit>().save(
+          homeId,
+          ParseResult(
+            record: record,
+            reminders: [
+              ...result.reminders,
+              if (_remindOn != null)
+                Reminder(
+                  title: record.title,
+                  detail: 'Follow-up you set when saving this',
+                  due: _remindOn!,
+                ),
+            ],
+            steps: result.steps,
+          ),
+          edited: _editing,
+        );
   }
 
   Widget _row(String label, String value) {
@@ -504,6 +508,28 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocConsumer<AddEntryCubit, AddEntryState>(
+      listener: (context, state) {
+        switch (state) {
+          case AddEntrySaved(:final saved, :final edited):
+            context.read<TimelineCubit>().addParsed(saved);
+            Navigator.of(context).popUntil((route) => route.isFirst);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(edited
+                    ? 'Saved with your corrections ✓'
+                    : 'Saved to your house timeline ✓'),
+                duration: const Duration(seconds: 2)));
+          case AddEntryError(:final message, result: final _?):
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+          case _:
+            break;
+        }
+      },
+      builder: (context, state) => _buildBody(context, saving: state is AddEntrySaving),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, {required bool saving}) {
     final r = result.record;
     return Scaffold(
       appBar: AppBar(title: Text(_editing ? 'Fix the details' : 'Here\'s what I got')),
@@ -613,16 +639,16 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            icon: _saving
+            icon: saving
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                 : const Icon(Icons.check),
-            label: Text(_saving
+            label: Text(saving
                 ? 'Saving…'
                 : (_editing ? 'Save my corrections' : 'Looks right — save it')),
-            onPressed: _saving ? null : _save,
+            onPressed: saving ? null : _save,
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(

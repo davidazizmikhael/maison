@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../models.dart';
+import 'models.dart';
 
 /// Compile-time backend config. Run with:
 ///   flutter run --dart-define=SUPABASE_URL=https://xxx.supabase.co \
@@ -62,12 +62,12 @@ class MockBackend implements Backend {
 
   @override
   Future<void> saveRecord(String homeId, ParseResult result, {Uint8List? photoBytes}) async {
-    AppState.instance.addParsed(result);
+    // Demo mode keeps no store of its own — the TimelineCubit owns the state.
   }
 
   @override
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId) async =>
-      (AppState.instance.records, AppState.instance.reminders);
+      (const <HomeRecord>[], const <Reminder>[]);
 }
 
 /// Real backend: Supabase auth + Postgres + storage + the parse-entry edge function.
@@ -201,8 +201,6 @@ class SupabaseBackend implements Backend {
         'seasonal': rem.seasonal,
       });
     }
-    // Optimistic local update so the timeline reflects the save immediately.
-    AppState.instance.addParsed(result);
   }
 
   @override

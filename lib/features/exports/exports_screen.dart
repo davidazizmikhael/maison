@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import '../models.dart';
-import '../theme.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../core/theme.dart';
+import '../timeline/timeline_cubit.dart';
 
 class ExportsScreen extends StatelessWidget {
   const ExportsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final state = AppState.instance;
+    final state = context.watch<TimelineCubit>().state;
     return Scaffold(
       appBar: AppBar(title: const Text('Exports')),
       body: ListView(
