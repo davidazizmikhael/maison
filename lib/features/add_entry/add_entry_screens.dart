@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/l10n_ext.dart';
@@ -74,7 +75,7 @@ void _startCapture(BuildContext sheetContext, BuildContext parentContext, Captur
   Navigator.of(parentContext).push(MaterialPageRoute(
     builder: (_) => mode == CaptureMode.note
         ? QuickNoteScreen()
-        : FakeCameraScreen(mode: mode),
+        : CaptureScreen(mode: mode),
   ));
 }
 
@@ -105,38 +106,179 @@ class _AddOption extends StatelessWidget {
   }
 }
 
-/// A simulated camera viewfinder — the demo has no camera permission needs.
-class FakeCameraScreen extends StatelessWidget {
-  const FakeCameraScreen({super.key, required this.mode});
+/// Capture screen with an embedded live viewfinder (live mode) — the camera
+/// renders inside the app's own framed card, ChatGPT-style, instead of the
+/// full-screen system camera. Demo mode keeps the simulated viewfinder.
+class CaptureScreen extends StatefulWidget {
+  const CaptureScreen({super.key, required this.mode});
   final CaptureMode mode;
 
-  /// Live mode: real capture via the system camera or photo library,
-  /// downscaled so the AI call stays fast and cheap.
-  Future<void> _pick(BuildContext context, ImageSource source) async {
+  @override
+  State<CaptureScreen> createState() => _CaptureScreenState();
+}
+
+class _CaptureScreenState extends State<CaptureScreen> {
+  CameraController? _controller;
+  bool _initializing = BackendConfig.enabled;
+  bool _shooting = false;
+  String? _cameraError;
+
+  @override
+  void initState() {
+    super.initState();
+    if (BackendConfig.enabled) _initCamera();
+  }
+
+  Future<void> _initCamera() async {
     try {
-      final file = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1600,
-        imageQuality: 82,
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) throw CameraException('none', 'No camera on this device');
+      final back = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
       );
-      if (file == null) return; // user cancelled
-      final bytes = await file.readAsBytes();
-      if (context.mounted) {
-        Navigator.of(context).pushReplacement(parsingRoute(mode, imageBytes: bytes));
+      final controller = CameraController(back, ResolutionPreset.high, enableAudio: false);
+      await controller.initialize();
+      if (!mounted) {
+        controller.dispose();
+        return;
       }
+      setState(() {
+        _controller = controller;
+        _initializing = false;
+      });
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(source == ImageSource.camera
-                ? context.l10n.cameraUnavailable('$e')
-                : context.l10n.photoReadError('$e'))));
+      if (mounted) {
+        setState(() {
+          _initializing = false;
+          _cameraError = '$e';
+        });
       }
     }
   }
 
   @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _shoot() async {
+    if (!BackendConfig.enabled) {
+      // Demo mode: no camera — proceed with the canned parse.
+      Navigator.of(context).pushReplacement(parsingRoute(widget.mode));
+      return;
+    }
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized || _shooting) return;
+    setState(() => _shooting = true);
+    try {
+      final file = await controller.takePicture();
+      final bytes = await file.readAsBytes();
+      if (mounted) {
+        Navigator.of(context).pushReplacement(parsingRoute(widget.mode, imageBytes: bytes));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _shooting = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.cameraUnavailable('$e'))));
+      }
+    }
+  }
+
+  Future<void> _pickFromLibrary() async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 82,
+      );
+      if (file == null) return; // user cancelled
+      final bytes = await file.readAsBytes();
+      if (mounted) {
+        Navigator.of(context).pushReplacement(parsingRoute(widget.mode, imageBytes: bytes));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.photoReadError('$e'))));
+      }
+    }
+  }
+
+  Widget _viewfinderContent(BuildContext context, bool isNameplate) {
+    final controller = _controller;
+    if (controller != null && controller.value.isInitialized) {
+      final preview = controller.value.previewSize!;
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          FittedBox(
+            fit: BoxFit.cover,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              // Preview size is landscape; swap for portrait rendering.
+              width: preview.height,
+              height: preview.width,
+              child: CameraPreview(controller),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 12,
+            child: Text(
+              isNameplate ? context.l10n.hintNameplateLive : context.l10n.hintReceiptLive,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 12.5,
+                height: 1.4,
+                shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    if (_initializing) {
+      return const Center(
+        child: SizedBox(
+          width: 30,
+          height: 30,
+          child: CircularProgressIndicator(strokeWidth: 3, color: MaisonColors.accent),
+        ),
+      );
+    }
+    // Demo mode, or the camera failed (e.g. simulators have none).
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(isNameplate ? '🏷️' : '🧾', style: const TextStyle(fontSize: 64)),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _cameraError != null
+                  ? context.l10n.cameraUnavailable(_cameraError!)
+                  : (isNameplate
+                      ? context.l10n.hintNameplateDemo
+                      : context.l10n.hintReceiptDemo),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 14, height: 1.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isNameplate = mode == CaptureMode.nameplate;
+    final isNameplate = widget.mode == CaptureMode.nameplate;
+    final cameraReady = _controller?.value.isInitialized ?? false;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -148,36 +290,15 @@ class FakeCameraScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: Center(
-              child: Container(
-                margin: const EdgeInsets.all(36),
-                decoration: BoxDecoration(
-                  border: Border.all(color: MaisonColors.accent, width: 2.5),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(isNameplate ? '🏷️' : '🧾', style: const TextStyle(fontSize: 64)),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Text(
-                          BackendConfig.enabled
-                              ? (isNameplate
-                                  ? context.l10n.hintNameplateLive
-                                  : context.l10n.hintReceiptLive)
-                              : (isNameplate
-                                  ? context.l10n.hintNameplateDemo
-                                  : context.l10n.hintReceiptDemo),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 14, height: 1.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            child: Container(
+              margin: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                border: Border.all(color: MaisonColors.accent, width: 2.5),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(19),
+                child: _viewfinderContent(context, isNameplate),
               ),
             ),
           ),
@@ -187,9 +308,11 @@ class FakeCameraScreen extends StatelessWidget {
               children: [
                 GestureDetector(
                   key: const Key('capture'),
-                  onTap: () => BackendConfig.enabled
-                      ? _pick(context, ImageSource.camera)
-                      : Navigator.of(context).pushReplacement(parsingRoute(mode)),
+                  onTap: (_shooting || (BackendConfig.enabled && !cameraReady && _cameraError == null))
+                      ? null
+                      : (BackendConfig.enabled && !cameraReady
+                          ? _pickFromLibrary // camera broken → shutter opens library
+                          : _shoot),
                   child: Container(
                     width: 76,
                     height: 76,
@@ -198,14 +321,17 @@ class FakeCameraScreen extends StatelessWidget {
                       border: Border.all(color: Colors.white, width: 4),
                     ),
                     padding: const EdgeInsets.all(5),
-                    child: const DecoratedBox(
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: MaisonColors.accent),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _shooting ? Colors.white54 : MaisonColors.accent,
+                      ),
                     ),
                   ),
                 ),
                 if (BackendConfig.enabled)
                   TextButton.icon(
-                    onPressed: () => _pick(context, ImageSource.gallery),
+                    onPressed: _pickFromLibrary,
                     icon: const Icon(Icons.photo_library_outlined, color: Colors.white70, size: 19),
                     label: Text(context.l10n.chooseFromLibrary,
                         style: const TextStyle(color: Colors.white70, fontSize: 14)),
