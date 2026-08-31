@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -32,6 +33,11 @@ void main() {
   testWidgets('Full Maison walkthrough', (tester) async {
     app.main();
     await tester.pumpAndSettle();
+    // Android renders test screenshots from an offscreen image surface.
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await binding.convertFlutterSurfaceToImage();
+      await tester.pumpAndSettle();
+    }
 
     // 1 — Onboarding
     await shot(tester, '01-onboarding-welcome');
