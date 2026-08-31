@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -11,6 +12,17 @@ const _inkSoft = PdfColor.fromInt(0xFF4A5568);
 const _accent = PdfColor.fromInt(0xFFD97742);
 const _line = PdfColor.fromInt(0xFFE4DDD2);
 const _paper = PdfColor.fromInt(0xFFFAF7F2);
+
+/// The built-in Helvetica has no Unicode support (em-dashes and French
+/// accents render as boxes), so every page embeds Open Sans.
+pw.ThemeData? _cachedTheme;
+Future<pw.ThemeData> _pdfTheme() async {
+  if (_cachedTheme != null) return _cachedTheme!;
+  final regular = pw.Font.ttf(await rootBundle.load('assets/fonts/OpenSans-Regular.ttf'));
+  final bold = pw.Font.ttf(await rootBundle.load('assets/fonts/OpenSans-Bold.ttf'));
+  _cachedTheme = pw.ThemeData.withFont(base: regular, bold: bold, italic: regular, boldItalic: bold);
+  return _cachedTheme!;
+}
 
 String _fmtDate(DateTime d) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -54,7 +66,7 @@ Future<Uint8List> buildClaimPack({
   required HomeRecord record,
   Uint8List? photo,
 }) async {
-  final doc = pw.Document();
+  final doc = pw.Document(theme: await _pdfTheme());
   doc.addPage(pw.Page(
     pageFormat: PdfPageFormat.letter,
     build: (context) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
@@ -96,7 +108,7 @@ Future<Uint8List> buildInventory({
   required Map<HomeRecord, Uint8List> photos,
 }) async {
   final total = records.fold<double>(0, (sum, r) => sum + (r.cost ?? 0));
-  final doc = pw.Document();
+  final doc = pw.Document(theme: await _pdfTheme());
   doc.addPage(pw.MultiPage(
     pageFormat: PdfPageFormat.letter,
     build: (context) => [
@@ -113,8 +125,8 @@ Future<Uint8List> buildInventory({
             [
               r.title,
               r.room,
-              r.cost != null ? '\$${r.cost!.toStringAsFixed(2)}' : '-',
-              r.warrantyUntil != null ? _fmtDate(r.warrantyUntil!) : '-',
+              r.cost != null ? '\$${r.cost!.toStringAsFixed(2)}' : '—',
+              r.warrantyUntil != null ? _fmtDate(r.warrantyUntil!) : '—',
             ],
         ],
       ),
@@ -155,7 +167,7 @@ Future<Uint8List> buildHouseHistory({
   required List<HomeRecord> records,
 }) async {
   final sorted = [...records]..sort((a, b) => b.addedOn.compareTo(a.addedOn));
-  final doc = pw.Document();
+  final doc = pw.Document(theme: await _pdfTheme());
   doc.addPage(pw.MultiPage(
     pageFormat: PdfPageFormat.letter,
     build: (context) => [
