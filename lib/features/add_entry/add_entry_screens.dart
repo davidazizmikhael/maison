@@ -72,11 +72,11 @@ void showAddSheet(BuildContext context) {
 
 void _startCapture(BuildContext sheetContext, BuildContext parentContext, CaptureMode mode) {
   Navigator.of(sheetContext).pop();
-  Navigator.of(parentContext).push(MaterialPageRoute(
-    builder: (_) => mode == CaptureMode.note
-        ? QuickNoteScreen()
-        : CaptureScreen(mode: mode),
-  ));
+  if (mode == CaptureMode.note) {
+    Navigator.of(parentContext).push(MaterialPageRoute(builder: (_) => QuickNoteScreen()));
+  } else {
+    showCaptureSheet(parentContext, mode);
+  }
 }
 
 class _AddOption extends StatelessWidget {
@@ -106,18 +106,34 @@ class _AddOption extends StatelessWidget {
   }
 }
 
-/// Capture screen with an embedded live viewfinder (live mode) — the camera
-/// renders inside the app's own framed card, ChatGPT-style, instead of the
-/// full-screen system camera. Demo mode keeps the simulated viewfinder.
-class CaptureScreen extends StatefulWidget {
-  const CaptureScreen({super.key, required this.mode});
+/// Camera as a bottom sheet (ChatGPT-style): the live viewfinder slides up
+/// over the current screen as a rounded panel, controls overlaid inside it.
+/// Resolves with the captured bytes (null bytes = demo mode, proceed without).
+Future<void> showCaptureSheet(BuildContext context, CaptureMode mode) async {
+  final result = await showModalBottomSheet<CaptureResult>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => CaptureSheet(mode: mode),
+  );
+  if (result == null || !context.mounted) return; // dismissed
+  Navigator.of(context).push(parsingRoute(mode, imageBytes: result.bytes));
+}
+
+class CaptureResult {
+  const CaptureResult(this.bytes);
+  final Uint8List? bytes;
+}
+
+class CaptureSheet extends StatefulWidget {
+  const CaptureSheet({super.key, required this.mode});
   final CaptureMode mode;
 
   @override
-  State<CaptureScreen> createState() => _CaptureScreenState();
+  State<CaptureSheet> createState() => _CaptureSheetState();
 }
 
-class _CaptureScreenState extends State<CaptureScreen> {
+class _CaptureSheetState extends State<CaptureSheet> {
   CameraController? _controller;
   bool _initializing = BackendConfig.enabled;
   bool _shooting = false;
@@ -165,19 +181,21 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   Future<void> _shoot() async {
     if (!BackendConfig.enabled) {
-      // Demo mode: no camera — proceed with the canned parse.
-      Navigator.of(context).pushReplacement(parsingRoute(widget.mode));
+      Navigator.of(context).pop(const CaptureResult(null)); // demo: canned parse
       return;
     }
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized || _shooting) return;
+    if (controller == null || !controller.value.isInitialized) {
+      // Camera unavailable (simulator, denied) — shutter falls through to library.
+      await _pickFromLibrary();
+      return;
+    }
+    if (_shooting) return;
     setState(() => _shooting = true);
     try {
       final file = await controller.takePicture();
       final bytes = await file.readAsBytes();
-      if (mounted) {
-        Navigator.of(context).pushReplacement(parsingRoute(widget.mode, imageBytes: bytes));
-      }
+      if (mounted) Navigator.of(context).pop(CaptureResult(bytes));
     } catch (e) {
       if (mounted) {
         setState(() => _shooting = false);
@@ -194,11 +212,9 @@ class _CaptureScreenState extends State<CaptureScreen> {
         maxWidth: 1600,
         imageQuality: 82,
       );
-      if (file == null) return; // user cancelled
+      if (file == null) return; // user cancelled the picker, keep the sheet
       final bytes = await file.readAsBytes();
-      if (mounted) {
-        Navigator.of(context).pushReplacement(parsingRoute(widget.mode, imageBytes: bytes));
-      }
+      if (mounted) Navigator.of(context).pop(CaptureResult(bytes));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -207,39 +223,35 @@ class _CaptureScreenState extends State<CaptureScreen> {
     }
   }
 
-  Widget _viewfinderContent(BuildContext context, bool isNameplate) {
+  Widget _roundButton({required Widget child, VoidCallback? onTap, Key? key}) {
+    return GestureDetector(
+      key: key,
+      onTap: onTap,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black.withValues(alpha: 0.45),
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _viewfinder(BuildContext context, bool isNameplate) {
     final controller = _controller;
     if (controller != null && controller.value.isInitialized) {
       final preview = controller.value.previewSize!;
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          FittedBox(
-            fit: BoxFit.cover,
-            clipBehavior: Clip.hardEdge,
-            child: SizedBox(
-              // Preview size is landscape; swap for portrait rendering.
-              width: preview.height,
-              height: preview.width,
-              child: CameraPreview(controller),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 12,
-            child: Text(
-              isNameplate ? context.l10n.hintNameplateLive : context.l10n.hintReceiptLive,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 12.5,
-                height: 1.4,
-                shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
-              ),
-            ),
-          ),
-        ],
+      return FittedBox(
+        fit: BoxFit.cover,
+        clipBehavior: Clip.hardEdge,
+        child: SizedBox(
+          // Preview size is landscape; swap for portrait rendering.
+          width: preview.height,
+          height: preview.width,
+          child: CameraPreview(controller),
+        ),
       );
     }
     if (_initializing) {
@@ -252,25 +264,29 @@ class _CaptureScreenState extends State<CaptureScreen> {
       );
     }
     // Demo mode, or the camera failed (e.g. simulators have none).
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(isNameplate ? '🏷️' : '🧾', style: const TextStyle(fontSize: 64)),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              _cameraError != null
-                  ? context.l10n.cameraUnavailable(_cameraError!)
-                  : (isNameplate
-                      ? context.l10n.hintNameplateDemo
-                      : context.l10n.hintReceiptDemo),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 14, height: 1.5),
+    return Container(
+      color: const Color(0xFF15181F),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(isNameplate ? '🏷️' : '🧾', style: const TextStyle(fontSize: 64)),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _cameraError != null
+                    ? context.l10n.cameraUnavailable(_cameraError!)
+                    : (isNameplate
+                        ? context.l10n.hintNameplateDemo
+                        : context.l10n.hintReceiptDemo),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75), fontSize: 14, height: 1.5),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -278,68 +294,77 @@ class _CaptureScreenState extends State<CaptureScreen> {
   @override
   Widget build(BuildContext context) {
     final isNameplate = widget.mode == CaptureMode.nameplate;
-    final cameraReady = _controller?.value.isInitialized ?? false;
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(isNameplate ? context.l10n.scanNameplateTitle : context.l10n.scanReceiptTitle,
-            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                border: Border.all(color: MaisonColors.accent, width: 2.5),
-                borderRadius: BorderRadius.circular(22),
+    final cameraLive = _controller?.value.isInitialized ?? false;
+    return FractionallySizedBox(
+      heightFactor: 0.86,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _viewfinder(context, isNameplate),
+            if (cameraLive)
+              Positioned(
+                top: 14,
+                left: 24,
+                right: 24,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    (isNameplate ? context.l10n.hintNameplateLive : context.l10n.hintReceiptLive)
+                        .replaceAll('\n', ' '),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5, height: 1.35),
+                  ),
+                ),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(19),
-                child: _viewfinderContent(context, isNameplate),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 44, top: 8),
-            child: Column(
-              children: [
-                GestureDetector(
-                  key: const Key('capture'),
-                  onTap: (_shooting || (BackendConfig.enabled && !cameraReady && _cameraError == null))
-                      ? null
-                      : (BackendConfig.enabled && !cameraReady
-                          ? _pickFromLibrary // camera broken → shutter opens library
-                          : _shoot),
-                  child: Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                    ),
-                    padding: const EdgeInsets.all(5),
-                    child: DecoratedBox(
+            Positioned(
+              left: 28,
+              right: 28,
+              bottom: 30,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _roundButton(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Icon(Icons.chevron_left, color: Colors.white, size: 30),
+                  ),
+                  GestureDetector(
+                    key: const Key('capture'),
+                    onTap: _shooting ? null : _shoot,
+                    child: Container(
+                      width: 74,
+                      height: 74,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _shooting ? Colors.white54 : MaisonColors.accent,
+                        border: Border.all(color: Colors.white70, width: 3),
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _shooting ? Colors.white54 : Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (BackendConfig.enabled)
-                  TextButton.icon(
-                    onPressed: _pickFromLibrary,
-                    icon: const Icon(Icons.photo_library_outlined, color: Colors.white70, size: 19),
-                    label: Text(context.l10n.chooseFromLibrary,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                  ),
-              ],
+                  if (BackendConfig.enabled)
+                    _roundButton(
+                      onTap: _pickFromLibrary,
+                      child: const Icon(Icons.photo_library_outlined,
+                          color: Colors.white, size: 24),
+                    )
+                  else
+                    const SizedBox(width: 52),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
