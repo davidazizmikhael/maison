@@ -1,4 +1,4 @@
-package com.maison.app
+package com.davidazizmikhael.maison
 
 import io.flutter.embedding.android.FlutterActivity
 
