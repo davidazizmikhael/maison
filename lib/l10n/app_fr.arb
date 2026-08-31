@@ -125,5 +125,11 @@
   "obSettingUp": "Création de votre maison…",
   "obCreateError": "Impossible de créer votre maison — vérifiez votre connexion. ({error})",
   "bootCantReach": "Impossible d'accéder à votre carnet",
-  "bootTryAgain": "Réessayer"
+  "bootTryAgain": "Réessayer",
+  "deleteRecord": "Supprimer l'enregistrement",
+  "deleteConfirmTitle": "Supprimer cet enregistrement ?",
+  "deleteConfirmBody": "Il sera retiré définitivement de votre carnet, avec sa photo et ses rappels.",
+  "deleteButton": "Supprimer",
+  "cancelButton": "Annuler",
+  "deletedSnack": "Enregistrement supprimé"
 }

@@ -106,6 +106,18 @@ void main() {
     await tester.pumpAndSettle();
     await waitFor(tester, find.text('Add'));
 
+    // 6b — Delete the note record from its detail screen
+    await tester.tap(find.text('Bathroom faucet repair'));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('View manual'));
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+    await shot(tester, '12b-delete-confirm');
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('Add'));
+    expect(find.text('Bathroom faucet repair'), findsNothing);
+
     // 7 — Exports
     await tester.tap(find.byIcon(Icons.ios_share));
     await tester.pumpAndSettle();

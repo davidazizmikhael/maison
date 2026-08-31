@@ -434,4 +434,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bootTryAgain => 'Try again';
+
+  @override
+  String get deleteRecord => 'Delete record';
+
+  @override
+  String get deleteConfirmTitle => 'Delete this record?';
+
+  @override
+  String get deleteConfirmBody =>
+      'It will be removed from your logbook permanently, along with its photo and reminders.';
+
+  @override
+  String get deleteButton => 'Delete';
+
+  @override
+  String get cancelButton => 'Cancel';
+
+  @override
+  String get deletedSnack => 'Record deleted';
 }

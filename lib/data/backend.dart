@@ -40,6 +40,9 @@ abstract class Backend {
 
   /// Short-lived signed URL for a photo in the private bucket (null in demo mode).
   Future<String?> photoUrl(String path);
+
+  /// Deletes the record row (reminders cascade) and its stored photo.
+  Future<void> deleteRecord(HomeRecord record);
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId);
 
   static Backend get instance =>
@@ -72,6 +75,11 @@ class MockBackend implements Backend {
 
   @override
   Future<String?> photoUrl(String path) async => null;
+
+  @override
+  Future<void> deleteRecord(HomeRecord record) async {
+    // Demo mode: the TimelineCubit owns the state.
+  }
 
   @override
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId) async =>
@@ -209,7 +217,22 @@ class SupabaseBackend implements Backend {
         'seasonal': rem.seasonal,
       });
     }
-    return r.copyWith(photoPath: photoPath);
+    return r.copyWith(id: row['id'] as String, photoPath: photoPath);
+  }
+
+  @override
+  Future<void> deleteRecord(HomeRecord record) async {
+    final id = record.id;
+    if (id == null) return;
+    await _db.from('records').delete().eq('id', id);
+    final photo = record.photoPath;
+    if (photo != null) {
+      try {
+        await _db.storage.from('captures').remove([photo]);
+      } catch (_) {
+        // The row is gone; a stray file is harmless and cleanable later.
+      }
+    }
   }
 
   @override
@@ -232,6 +255,7 @@ class SupabaseBackend implements Backend {
     final records = [
       for (final r in recordRows)
         HomeRecord(
+          id: r['id'] as String,
           kind: RecordKind.values.byName(r['kind'] as String),
           title: r['title'] as String,
           subtitle: (r['subtitle'] as String?) ?? '',

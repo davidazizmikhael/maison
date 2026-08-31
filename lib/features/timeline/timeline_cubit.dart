@@ -46,6 +46,19 @@ class TimelineCubit extends Cubit<TimelineState> {
     _emitSynced([result.record, ...state.records], [...state.reminders, ...result.reminders]);
   }
 
+  /// Deletes on the backend, then resyncs (live) or drops locally (demo).
+  Future<void> delete(HomeRecord record, {String? homeId}) async {
+    await _backend.deleteRecord(record);
+    if (BackendConfig.enabled && homeId != null) {
+      await load(homeId); // reminders cascade server-side; resync everything
+    } else {
+      _emitSynced(
+        state.records.where((r) => !identical(r, record)).toList(),
+        state.reminders,
+      );
+    }
+  }
+
   /// Demo-mode canned data, shaped by the onboarding profile.
   void seedDemo(HomeProfile? profile) {
     if (state.records.isNotEmpty) return;

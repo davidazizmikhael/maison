@@ -1,13 +1,52 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/photo_viewer.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
+import '../../core/l10n_ext.dart';
 import '../../data/models.dart';
+import '../session/session_cubit.dart';
+import 'timeline_cubit.dart';
 
 class RecordDetailScreen extends StatelessWidget {
   const RecordDetailScreen({super.key, required this.record});
   final HomeRecord record;
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: dialogContext.mc.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(dialogContext.l10n.deleteConfirmTitle,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        content: Text(dialogContext.l10n.deleteConfirmBody,
+            style: TextStyle(fontSize: 14.5, height: 1.5, color: dialogContext.mc.inkSoft)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(dialogContext.l10n.cancelButton,
+                style: TextStyle(color: dialogContext.mc.inkSoft, fontWeight: FontWeight.w700)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: dialogContext.mc.red),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(dialogContext.l10n.deleteButton),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final session = context.read<SessionCubit>().state;
+    final homeId = session is SessionReady ? session.homeId : null;
+    await context.read<TimelineCubit>().delete(record, homeId: homeId);
+    if (!context.mounted) return;
+    final snack = context.l10n.deletedSnack;
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(snack), duration: const Duration(seconds: 2)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +62,17 @@ class RecordDetailScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(record.room)),
+      appBar: AppBar(
+        title: Text(record.room),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete_outline, color: context.mc.red),
+            tooltip: context.l10n.deleteRecord,
+            onPressed: () => _confirmDelete(context),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

@@ -96,6 +96,7 @@ class HomeScreen extends StatelessWidget {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: state.reminders.length,
+                    clipBehavior: Clip.none,
                     separatorBuilder: (context, index) => const SizedBox(width: 12),
                     itemBuilder: (_, i) => _ReminderCard(reminder: state.reminders[i]),
                   ),

@@ -434,4 +434,23 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bootTryAgain => 'Réessayer';
+
+  @override
+  String get deleteRecord => 'Supprimer l\'enregistrement';
+
+  @override
+  String get deleteConfirmTitle => 'Supprimer cet enregistrement ?';
+
+  @override
+  String get deleteConfirmBody =>
+      'Il sera retiré définitivement de votre carnet, avec sa photo et ses rappels.';
+
+  @override
+  String get deleteButton => 'Supprimer';
+
+  @override
+  String get cancelButton => 'Annuler';
+
+  @override
+  String get deletedSnack => 'Enregistrement supprimé';
 }

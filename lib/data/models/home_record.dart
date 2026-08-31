@@ -3,6 +3,7 @@ enum RecordKind { appliance, receipt, service }
 
 class HomeRecord {
   HomeRecord({
+    this.id,
     required this.kind,
     required this.title,
     required this.subtitle,
@@ -17,6 +18,9 @@ class HomeRecord {
     this.photoPath,
     DateTime? addedOn,
   }) : addedOn = addedOn ?? DateTime.now();
+
+  /// Database row id (null in demo mode and before first save).
+  final String? id;
 
   final RecordKind kind;
   final String title;
@@ -34,7 +38,8 @@ class HomeRecord {
   final String? photoPath;
   final DateTime addedOn;
 
-  HomeRecord copyWith({String? photoPath}) => HomeRecord(
+  HomeRecord copyWith({String? id, String? photoPath}) => HomeRecord(
+        id: id ?? this.id,
         kind: kind,
         title: title,
         subtitle: subtitle,
