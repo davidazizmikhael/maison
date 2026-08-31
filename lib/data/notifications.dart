@@ -51,6 +51,11 @@ class NotificationService {
         ?.requestNotificationsPermission();
   }
 
+  /// What is currently scheduled — used by integration tests to verify the
+  /// reminder list and the notification queue stay in sync.
+  static Future<List<PendingNotificationRequest>> pending() =>
+      _plugin.pendingNotificationRequests();
+
   /// Mirror the pending reminder list into scheduled notifications.
   /// Called whenever reminders change; cancel-all-then-reschedule keeps the
   /// two in sync without tracking per-reminder notification ids.

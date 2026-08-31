@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:maison/data/notifications.dart';
 import 'package:maison/main.dart' as app;
 
 /// Walks the full Maison user journey and captures a screenshot at each step.
@@ -106,7 +107,43 @@ void main() {
     await tester.tap(find.textContaining('Generate inventory'));
     await tester.pumpAndSettle();
     await shot(tester, '14-export-generated');
-
     expect(find.text('📄  PDF ready'), findsOneWidget);
+    await tester.tap(find.text('Nice'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    // 8 — Local notifications mirror the reminder list
+    final pending = await tester.runAsync(() => NotificationService.pending());
+    expect(pending, isNotNull);
+    expect(pending!, isNotEmpty, reason: 'reminders should schedule local notifications');
+    expect(pending.map((p) => p.title), contains('Replace furnace filter'));
+
+    // 9 — Language: switch to French, verify, switch back to English
+    await tester.tap(find.byIcon(Icons.language));
+    await tester.pumpAndSettle();
+    await shot(tester, '15-language-sheet');
+    await tester.tap(find.text('Français'));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('HISTORIQUE DE LA MAISON'));
+    expect(find.text('À VENIR'), findsOneWidget);
+    await shot(tester, '16-home-french');
+    await tester.tap(find.byIcon(Icons.language));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('HOUSE TIMELINE'));
+
+    // 10 — Theme: simulate the device flipping to dark, verify the palette follows
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    await tester.pumpAndSettle();
+    final darkCtx = tester.element(find.byType(Scaffold).first);
+    expect(Theme.of(darkCtx).brightness, Brightness.dark,
+        reason: 'themeMode.system should follow the device into dark');
+    await shot(tester, '17-home-dark');
+    tester.platformDispatcher.clearPlatformBrightnessTestValue();
+    await tester.pumpAndSettle();
+    final lightCtx = tester.element(find.byType(Scaffold).first);
+    expect(Theme.of(lightCtx).brightness, Brightness.light);
   });
 }
