@@ -35,7 +35,11 @@ abstract class Backend {
   Future<String> upsertHome({required String address, HomeProfile? profile});
   Future<ParseResult> parseEntry(CaptureMode mode,
       {String? noteText, Uint8List? imageBytes, String mediaType});
-  Future<void> saveRecord(String homeId, ParseResult result, {Uint8List? photoBytes});
+  /// Persists and returns the record as stored (including its photo path).
+  Future<HomeRecord> saveRecord(String homeId, ParseResult result, {Uint8List? photoBytes});
+
+  /// Short-lived signed URL for a photo in the private bucket (null in demo mode).
+  Future<String?> photoUrl(String path);
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId);
 
   static Backend get instance =>
@@ -61,9 +65,13 @@ class MockBackend implements Backend {
   }
 
   @override
-  Future<void> saveRecord(String homeId, ParseResult result, {Uint8List? photoBytes}) async {
+  Future<HomeRecord> saveRecord(String homeId, ParseResult result, {Uint8List? photoBytes}) async {
     // Demo mode keeps no store of its own — the TimelineCubit owns the state.
+    return result.record;
   }
+
+  @override
+  Future<String?> photoUrl(String path) async => null;
 
   @override
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId) async =>
@@ -163,7 +171,7 @@ class SupabaseBackend implements Backend {
   }
 
   @override
-  Future<void> saveRecord(String homeId, ParseResult result, {Uint8List? photoBytes}) async {
+  Future<HomeRecord> saveRecord(String homeId, ParseResult result, {Uint8List? photoBytes}) async {
     final uid = _db.auth.currentUser!.id;
     String? photoPath;
     if (photoBytes != null) {
@@ -201,7 +209,12 @@ class SupabaseBackend implements Backend {
         'seasonal': rem.seasonal,
       });
     }
+    return r.copyWith(photoPath: photoPath);
   }
+
+  @override
+  Future<String?> photoUrl(String path) async =>
+      _db.storage.from('captures').createSignedUrl(path, 3600);
 
   @override
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId) async {
@@ -230,6 +243,7 @@ class SupabaseBackend implements Backend {
           returnBy: _date(r['return_by']),
           manualFound: (r['manual_found'] as bool?) ?? false,
           rawInput: r['raw_input'] as String?,
+          photoPath: r['photo_path'] as String?,
           addedOn: DateTime.parse(r['created_at'] as String),
         ),
     ];

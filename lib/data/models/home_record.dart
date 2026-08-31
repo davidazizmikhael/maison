@@ -14,6 +14,7 @@ class HomeRecord {
     this.returnBy,
     this.manualFound = false,
     this.rawInput,
+    this.photoPath,
     DateTime? addedOn,
   }) : addedOn = addedOn ?? DateTime.now();
 
@@ -28,7 +29,26 @@ class HomeRecord {
   final DateTime? returnBy;
   final bool manualFound;
   final String? rawInput; // what the user snapped/typed, shown for AI transparency
+
+  /// Storage path of the original photo in the private 'captures' bucket.
+  final String? photoPath;
   final DateTime addedOn;
+
+  HomeRecord copyWith({String? photoPath}) => HomeRecord(
+        kind: kind,
+        title: title,
+        subtitle: subtitle,
+        room: room,
+        cost: cost,
+        vendor: vendor,
+        modelSerial: modelSerial,
+        warrantyUntil: warrantyUntil,
+        returnBy: returnBy,
+        manualFound: manualFound,
+        rawInput: rawInput,
+        photoPath: photoPath ?? this.photoPath,
+        addedOn: addedOn,
+      );
 
   String get emoji => switch (kind) {
         RecordKind.appliance => '🔧',

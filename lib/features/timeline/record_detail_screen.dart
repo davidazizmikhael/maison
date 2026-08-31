@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../data/models.dart';
+
+import '../../core/photo_viewer.dart';
 import '../../core/theme.dart';
+import '../../data/backend.dart';
+import '../../data/models.dart';
 
 class RecordDetailScreen extends StatelessWidget {
   const RecordDetailScreen({super.key, required this.record});
@@ -54,6 +57,10 @@ class RecordDetailScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (record.photoPath != null) ...[
+            const SizedBox(height: 16),
+            _RecordPhoto(photoPath: record.photoPath!),
+          ],
           if (warrantyDaysLeft != null) ...[
             const SizedBox(height: 16),
             Container(
@@ -142,6 +149,59 @@ class RecordDetailScreen extends StatelessWidget {
               )),
         ],
       ),
+    );
+  }
+}
+
+
+/// The captured photo, loaded via a short-lived signed URL from the private
+/// bucket. Tapping opens the full-screen pinch-zoom viewer.
+class _RecordPhoto extends StatefulWidget {
+  const _RecordPhoto({required this.photoPath});
+  final String photoPath;
+
+  @override
+  State<_RecordPhoto> createState() => _RecordPhotoState();
+}
+
+class _RecordPhotoState extends State<_RecordPhoto> {
+  late final Future<String?> _url = Backend.instance.photoUrl(widget.photoPath);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: _url,
+      builder: (context, snapshot) {
+        final url = snapshot.data;
+        if (url == null) return const SizedBox.shrink();
+        return GestureDetector(
+          onTap: () => openPhotoViewer(context, url: url),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              color: context.mc.card,
+              height: 190,
+              width: double.infinity,
+              child: Image.network(
+                url,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) => progress == null
+                    ? child
+                    : Center(
+                        child: SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 3, color: context.mc.accent),
+                        ),
+                      ),
+                errorBuilder: (context, error, stack) =>
+                    Icon(Icons.broken_image_outlined, color: context.mc.inkSoft),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

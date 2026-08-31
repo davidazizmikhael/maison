@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/l10n_ext.dart';
+import '../../core/photo_viewer.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
 import '../../data/models.dart';
@@ -745,6 +746,22 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (widget.photoBytes != null)
+            GestureDetector(
+              onTap: () => openPhotoViewer(context, bytes: widget.photoBytes),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.memory(
+                    widget.photoBytes!,
+                    height: 170,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
           if (r.rawInput != null)
             Container(
               padding: const EdgeInsets.all(14),

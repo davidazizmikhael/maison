@@ -59,8 +59,10 @@ class AddEntryCubit extends Cubit<AddEntryState> {
       {required bool edited, Uint8List? photoBytes}) async {
     emit(AddEntrySaving(finalResult));
     try {
-      await _backend.saveRecord(homeId, finalResult, photoBytes: photoBytes);
-      emit(AddEntrySaved(finalResult, edited: edited));
+      final saved = await _backend.saveRecord(homeId, finalResult, photoBytes: photoBytes);
+      emit(AddEntrySaved(
+          ParseResult(record: saved, reminders: finalResult.reminders, steps: finalResult.steps),
+          edited: edited));
     } catch (e) {
       emit(AddEntryError('$e', result: finalResult));
     }
