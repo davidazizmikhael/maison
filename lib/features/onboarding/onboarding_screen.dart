@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
 import '../../data/models.dart';
@@ -56,8 +57,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Navigator.of(context)
                 .pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
           case SessionError(:final message, duringOnboarding: true):
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Couldn\'t create your home — check your connection. ($message)')));
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.obCreateError(message))));
           case _:
             break;
         }
@@ -110,8 +111,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: FilledButton(
                       onPressed: creating ? null : _next,
                       child: Text(creating
-                          ? 'Setting up your home…'
-                          : (_page == 3 ? 'Start my home profile' : 'Continue')),
+                          ? context.l10n.obSettingUp
+                          : (_page == 3 ? context.l10n.obStartProfile : context.l10n.obContinue)),
                     ),
                   ),
                 ],
@@ -136,11 +137,11 @@ class _WelcomePage extends StatelessWidget {
           const Text('M A I S O N',
               style: TextStyle(color: MaisonColors.accent, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 4)),
           const SizedBox(height: 24),
-          const Text('Snap it.\nMaison files it.\nForever.',
-              style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800, height: 1.15)),
+          Text(context.l10n.obWelcomeTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800, height: 1.15)),
           const SizedBox(height: 20),
           Text(
-            'Every appliance, receipt, repair and warranty in your home — photographed once, organized for good.',
+            context.l10n.obWelcomeBody,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 17, height: 1.5),
           ),
         ],
@@ -163,10 +164,10 @@ class _AddressPage extends StatelessWidget {
         children: [
           const Text('🏠', style: TextStyle(fontSize: 44)),
           const SizedBox(height: 16),
-          const Text('Where\'s home?',
-              style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800)),
+          Text(context.l10n.obWhereTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
-          Text('One logbook per home. You can add a condo, rental or chalet later.',
+          Text(context.l10n.obWhereBody,
               style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 16, height: 1.5)),
           const SizedBox(height: 28),
           TextField(
@@ -175,7 +176,7 @@ class _AddressPage extends StatelessWidget {
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white,
-              hintText: 'Street address',
+              hintText: context.l10n.obAddressHint,
               prefixIcon: const Icon(Icons.home_outlined, color: MaisonColors.accentDeep),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
             ),
@@ -225,10 +226,10 @@ class _DescribePlacePageState extends State<_DescribePlacePage> {
           const SizedBox(height: 12),
           const Text('🛋️', style: TextStyle(fontSize: 44)),
           const SizedBox(height: 16),
-          const Text('Describe your place\nlike you\'d tell a friend.',
-              style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, height: 1.2)),
+          Text(context.l10n.obDescribeTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, height: 1.2)),
           const SizedBox(height: 10),
-          Text('No steppers, no dropdowns. Maison turns your words into your home\'s profile — rooms, checklists, and reminders follow from it.',
+          Text(context.l10n.obDescribeBody,
               style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 15, height: 1.5)),
           const SizedBox(height: 24),
           TextField(
@@ -258,7 +259,7 @@ class _DescribePlacePageState extends State<_DescribePlacePage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: MaisonColors.accent))
                   : const Icon(Icons.auto_awesome, size: 19),
-              label: Text(_thinking ? 'Structuring…' : 'Structure it',
+              label: Text(_thinking ? context.l10n.obStructuring : context.l10n.obStructureIt,
                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
             ),
           ),
@@ -275,8 +276,8 @@ class _DescribePlacePageState extends State<_DescribePlacePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('HERE\'S YOUR PLACE',
-                      style: TextStyle(
+                  Text(context.l10n.obHeresYourPlace,
+                      style: const TextStyle(
                           color: MaisonColors.accent,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -285,7 +286,7 @@ class _DescribePlacePageState extends State<_DescribePlacePage> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _parsed!.chips
+                    children: localizedChips(context.l10n, _parsed!)
                         .map((c) => Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                               decoration: BoxDecoration(
@@ -302,7 +303,7 @@ class _DescribePlacePageState extends State<_DescribePlacePage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Wrong? Just edit the sentence and structure it again. Maison keeps refining this as you log.',
+                    context.l10n.obWrongEdit,
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12.5, height: 1.45),
                   ),
                 ],
@@ -350,12 +351,12 @@ class _HowItWorksPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Three ways to log.\nZero forms.',
-              style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, height: 1.2)),
+          Text(context.l10n.obHowTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, height: 1.2)),
           const SizedBox(height: 32),
-          _step('📸', 'Snap a nameplate', 'AI reads the model & serial, finds the manual, and schedules its maintenance.'),
-          _step('🧾', 'Snap a receipt', 'Price, store, warranty end date and return window — extracted and deadline-tracked.'),
-          _step('⌨️', 'Type it like a note', '"Water heater replaced, \$1,850, Joe\'s Plumbing" becomes a structured record.'),
+          _step('📸', context.l10n.obHow1Title, context.l10n.obHow1Body),
+          _step('🧾', context.l10n.obHow2Title, context.l10n.obHow2Body),
+          _step('⌨️', context.l10n.obHow3Title, context.l10n.obHow3Body),
         ],
       ),
     );

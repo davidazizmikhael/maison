@@ -51,17 +51,18 @@ class AddEntryCubit extends Cubit<AddEntryState> {
       final result = await _backend.parseEntry(mode, noteText: noteText, imageBytes: imageBytes);
       emit(AddEntryParsed(result));
     } catch (e) {
-      emit(AddEntryError('Couldn\'t parse that — check your connection and try again. ($e)'));
+      emit(AddEntryError('$e'));
     }
   }
 
-  Future<void> save(String homeId, ParseResult finalResult, {required bool edited}) async {
+  Future<void> save(String homeId, ParseResult finalResult,
+      {required bool edited, Uint8List? photoBytes}) async {
     emit(AddEntrySaving(finalResult));
     try {
-      await _backend.saveRecord(homeId, finalResult);
+      await _backend.saveRecord(homeId, finalResult, photoBytes: photoBytes);
       emit(AddEntrySaved(finalResult, edited: edited));
     } catch (e) {
-      emit(AddEntryError('Couldn\'t save — try again. ($e)', result: finalResult));
+      emit(AddEntryError('$e', result: finalResult));
     }
   }
 }

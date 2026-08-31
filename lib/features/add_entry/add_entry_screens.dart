@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
 import '../../data/models.dart';
@@ -9,12 +13,13 @@ import '../session/session_cubit.dart';
 import '../timeline/timeline_cubit.dart';
 import 'add_entry_cubit.dart';
 
-/// Route that owns one AddEntryCubit for the parse → confirm → save journey.
-Route<void> parsingRoute(CaptureMode mode, {String? noteText}) {
+/// Route that owns one AddEntryCubit for the parse leg of the journey.
+Route<void> parsingRoute(CaptureMode mode, {String? noteText, Uint8List? imageBytes}) {
   return MaterialPageRoute(
     builder: (_) => BlocProvider(
-      create: (_) => AddEntryCubit(Backend.instance)..parse(mode, noteText: noteText),
-      child: ParsingScreen(mode: mode),
+      create: (_) => AddEntryCubit(Backend.instance)
+        ..parse(mode, noteText: noteText, imageBytes: imageBytes),
+      child: ParsingScreen(mode: mode, imageBytes: imageBytes),
     ),
   );
 }
@@ -23,7 +28,7 @@ Route<void> parsingRoute(CaptureMode mode, {String? noteText}) {
 void showAddSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
-    backgroundColor: MaisonColors.paper,
+    backgroundColor: context.mc.paper,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
     builder: (sheetContext) => SafeArea(
@@ -33,28 +38,28 @@ void showAddSheet(BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add to your logbook',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            Text(context.l10n.addSheetTitle,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
-            const Text('No forms. Point, shoot, or just say it.',
-                style: TextStyle(fontSize: 14, color: MaisonColors.inkSoft)),
+            Text(context.l10n.addSheetSubtitle,
+                style: TextStyle(fontSize: 14, color: context.mc.inkSoft)),
             const SizedBox(height: 18),
             _AddOption(
               emoji: '📸',
-              title: 'Scan a nameplate',
-              subtitle: 'Furnace, water heater, A/C — AI finds the model & manual',
+              title: context.l10n.optionNameplate,
+              subtitle: context.l10n.optionNameplateSub,
               onTap: () => _startCapture(sheetContext, context, CaptureMode.nameplate),
             ),
             _AddOption(
               emoji: '🧾',
-              title: 'Scan a receipt or invoice',
-              subtitle: 'Warranty and return window extracted automatically',
+              title: context.l10n.optionReceipt,
+              subtitle: context.l10n.optionReceiptSub,
               onTap: () => _startCapture(sheetContext, context, CaptureMode.receipt),
             ),
             _AddOption(
               emoji: '⌨️',
-              title: 'Quick note',
-              subtitle: 'Type it like a text message — AI structures it',
+              title: context.l10n.optionNote,
+              subtitle: context.l10n.optionNoteSub,
               onTap: () => _startCapture(sheetContext, context, CaptureMode.note),
             ),
           ],
@@ -85,16 +90,16 @@ class _AddOption extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: MaisonColors.card,
+        color: context.mc.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: MaisonColors.line),
+        border: Border.all(color: context.mc.line),
       ),
       child: ListTile(
         onTap: onTap,
         leading: Text(emoji, style: const TextStyle(fontSize: 26)),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12.5, color: MaisonColors.inkSoft)),
-        trailing: const Icon(Icons.chevron_right, color: MaisonColors.inkSoft),
+        subtitle: Text(subtitle, style: TextStyle(fontSize: 12.5, color: context.mc.inkSoft)),
+        trailing: Icon(Icons.chevron_right, color: context.mc.inkSoft),
       ),
     );
   }
@@ -105,6 +110,30 @@ class FakeCameraScreen extends StatelessWidget {
   const FakeCameraScreen({super.key, required this.mode});
   final CaptureMode mode;
 
+  /// Live mode: real capture via the system camera or photo library,
+  /// downscaled so the AI call stays fast and cheap.
+  Future<void> _pick(BuildContext context, ImageSource source) async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 82,
+      );
+      if (file == null) return; // user cancelled
+      final bytes = await file.readAsBytes();
+      if (context.mounted) {
+        Navigator.of(context).pushReplacement(parsingRoute(mode, imageBytes: bytes));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(source == ImageSource.camera
+                ? context.l10n.cameraUnavailable('$e')
+                : context.l10n.photoReadError('$e'))));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isNameplate = mode == CaptureMode.nameplate;
@@ -113,7 +142,7 @@ class FakeCameraScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text(isNameplate ? 'Scan nameplate' : 'Scan receipt',
+        title: Text(isNameplate ? context.l10n.scanNameplateTitle : context.l10n.scanReceiptTitle,
             style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
       ),
       body: Column(
@@ -135,9 +164,13 @@ class FakeCameraScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Text(
-                          isNameplate
-                              ? 'Frame the metal label on the appliance.\nDemo mode: a furnace nameplate is pre-loaded.'
-                              : 'Flatten the receipt in the frame.\nDemo mode: a Canadian Tire receipt is pre-loaded.',
+                          BackendConfig.enabled
+                              ? (isNameplate
+                                  ? context.l10n.hintNameplateLive
+                                  : context.l10n.hintReceiptLive)
+                              : (isNameplate
+                                  ? context.l10n.hintNameplateDemo
+                                  : context.l10n.hintReceiptDemo),
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 14, height: 1.5),
                         ),
@@ -150,21 +183,34 @@ class FakeCameraScreen extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 44, top: 8),
-            child: GestureDetector(
-              key: const Key('capture'),
-              onTap: () => Navigator.of(context).pushReplacement(parsingRoute(mode)),
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
+            child: Column(
+              children: [
+                GestureDetector(
+                  key: const Key('capture'),
+                  onTap: () => BackendConfig.enabled
+                      ? _pick(context, ImageSource.camera)
+                      : Navigator.of(context).pushReplacement(parsingRoute(mode)),
+                  child: Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                    padding: const EdgeInsets.all(5),
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: MaisonColors.accent),
+                    ),
+                  ),
                 ),
-                padding: const EdgeInsets.all(5),
-                child: const DecoratedBox(
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: MaisonColors.accent),
-                ),
-              ),
+                if (BackendConfig.enabled)
+                  TextButton.icon(
+                    onPressed: () => _pick(context, ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined, color: Colors.white70, size: 19),
+                    label: Text(context.l10n.chooseFromLibrary,
+                        style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  ),
+              ],
             ),
           ),
         ],
@@ -193,14 +239,14 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quick note')),
+      appBar: AppBar(title: Text(context.l10n.quickNoteTitle)),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Write it like you\'d text a friend.',
-                style: TextStyle(fontSize: 15, color: MaisonColors.inkSoft)),
+            Text(context.l10n.quickNoteHint,
+                style: TextStyle(fontSize: 15, color: context.mc.inkSoft)),
             const SizedBox(height: 14),
             TextField(
               controller: _controller,
@@ -209,10 +255,10 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
               style: const TextStyle(fontSize: 17, height: 1.45),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: MaisonColors.card,
+                fillColor: context.mc.card,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: MaisonColors.line)),
+                    borderSide: BorderSide(color: context.mc.line)),
               ),
             ),
             const SizedBox(height: 16),
@@ -220,7 +266,7 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
               width: double.infinity,
               child: FilledButton.icon(
                 icon: const Icon(Icons.auto_awesome),
-                label: const Text('Let Maison file it'),
+                label: Text(context.l10n.quickNoteButton),
                 onPressed: () => Navigator.of(context)
                     .pushReplacement(parsingRoute(CaptureMode.note, noteText: _controller.text)),
               ),
@@ -235,21 +281,29 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
 /// The "AI is working" screen: animated step-by-step progress while the
 /// AddEntryCubit parses; moves to confirmation when both are done.
 class ParsingScreen extends StatefulWidget {
-  const ParsingScreen({super.key, required this.mode});
+  const ParsingScreen({super.key, required this.mode, this.imageBytes});
   final CaptureMode mode;
+  final Uint8List? imageBytes;
 
   @override
   State<ParsingScreen> createState() => _ParsingScreenState();
 }
 
 class _ParsingScreenState extends State<ParsingScreen> {
-  static const _stepsFor = {
-    CaptureMode.nameplate: ['Reading nameplate…', 'Identifying model…', 'Finding the manual…', 'Checking recalls…'],
-    CaptureMode.receipt: ['Scanning receipt…', 'Extracting items & prices…', 'Reading warranty terms…', 'Tracking return window…'],
-    CaptureMode.note: ['Reading your note…', 'Extracting the details…', 'Filing under the right room…'],
+  static const _stepCount = {
+    CaptureMode.nameplate: 4,
+    CaptureMode.receipt: 4,
+    CaptureMode.note: 3,
   };
 
-  List<String> get _steps => _stepsFor[widget.mode]!;
+  List<String> _steps(BuildContext context) {
+    final l = context.l10n;
+    return switch (widget.mode) {
+      CaptureMode.nameplate => [l.stepReadingNameplate, l.stepIdentifyingModel, l.stepFindingManual, l.stepCheckingRecalls],
+      CaptureMode.receipt => [l.stepScanningReceipt, l.stepExtractingItems, l.stepReadingWarranty, l.stepTrackingReturn],
+      CaptureMode.note => [l.stepReadingNote, l.stepExtractingDetails, l.stepFilingRoom],
+    };
+  }
   bool _animationDone = false;
   bool _navigated = false;
   int _step = 0;
@@ -259,7 +313,7 @@ class _ParsingScreenState extends State<ParsingScreen> {
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(milliseconds: 800), (t) {
-      if (_step < _steps.length - 1) {
+      if (_step < _stepCount[widget.mode]! - 1) {
         setState(() => _step++);
       } else {
         t.cancel();
@@ -277,11 +331,11 @@ class _ParsingScreenState extends State<ParsingScreen> {
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) {
         // pushReplacement disposes this route's cubit, so the confirm screen
-        // gets its own — the parsed result travels by constructor.
+        // gets its own — the parsed result and photo travel by constructor.
         Navigator.of(context).pushReplacement(MaterialPageRoute(
             builder: (_) => BlocProvider(
                 create: (_) => AddEntryCubit(Backend.instance),
-                child: ConfirmScreen(result: state.result))));
+                child: ConfirmScreen(result: state.result, photoBytes: widget.imageBytes))));
       }
     });
   }
@@ -300,7 +354,8 @@ class _ParsingScreenState extends State<ParsingScreen> {
           case AddEntryParsed():
             _maybeFinish();
           case AddEntryError(:final message):
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(context.l10n.parseError(message))));
             Navigator.of(context).pop();
           case _:
             break;
@@ -319,15 +374,15 @@ class _ParsingScreenState extends State<ParsingScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
+              Center(
                 child: SizedBox(
                   width: 56,
                   height: 56,
-                  child: CircularProgressIndicator(color: MaisonColors.accent, strokeWidth: 5),
+                  child: CircularProgressIndicator(color: context.mc.accent, strokeWidth: 5),
                 ),
               ),
               const SizedBox(height: 36),
-              ...List.generate(_steps.length, (i) {
+              ...List.generate(_steps(context).length, (i) {
                 final done = i < _step;
                 final active = i == _step;
                 return AnimatedOpacity(
@@ -340,11 +395,11 @@ class _ParsingScreenState extends State<ParsingScreen> {
                         Icon(
                           done ? Icons.check_circle : (active ? Icons.autorenew : Icons.circle_outlined),
                           size: 22,
-                          color: done ? MaisonColors.green : MaisonColors.accent,
+                          color: done ? context.mc.green : context.mc.accent,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(_steps[i],
+                          child: Text(_steps(context)[i],
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -366,8 +421,9 @@ class _ParsingScreenState extends State<ParsingScreen> {
 
 /// AI transparency: show what was extracted, let the user fix anything, then save.
 class ConfirmScreen extends StatefulWidget {
-  const ConfirmScreen({super.key, required this.result});
+  const ConfirmScreen({super.key, required this.result, this.photoBytes});
   final ParseResult result;
+  final Uint8List? photoBytes;
 
   @override
   State<ConfirmScreen> createState() => _ConfirmScreenState();
@@ -424,7 +480,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       initialDate: _remindOn ?? now.add(const Duration(days: 30)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 365 * 5)),
-      helpText: 'Remind me about this',
+      helpText: context.l10n.remindMeCard,
     );
     if (picked != null) setState(() => _remindOn = picked);
   }
@@ -442,17 +498,18 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
               if (_remindOn != null)
                 Reminder(
                   title: record.title,
-                  detail: 'Follow-up you set when saving this',
+                  detail: context.l10n.followUpDetail,
                   due: _remindOn!,
                 ),
             ],
             steps: result.steps,
           ),
           edited: _editing,
+          photoBytes: widget.photoBytes,
         );
   }
 
-  Widget _row(String label, String value) {
+  Widget _row(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
@@ -461,15 +518,15 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
           SizedBox(
               width: 105,
               child: Text(label,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w700, color: MaisonColors.inkSoft))),
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w700, color: context.mc.inkSoft))),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600))),
         ],
       ),
     );
   }
 
-  Widget _editRow(String label, TextEditingController controller, {TextInputType? keyboard}) {
+  Widget _editRow(BuildContext context, String label, TextEditingController controller, {TextInputType? keyboard}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -477,8 +534,8 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
           SizedBox(
               width: 105,
               child: Text(label,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w700, color: MaisonColors.inkSoft))),
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w700, color: context.mc.inkSoft))),
           Expanded(
             child: TextField(
               controller: controller,
@@ -487,17 +544,17 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
               decoration: InputDecoration(
                 isDense: true,
                 filled: true,
-                fillColor: MaisonColors.paper,
+                fillColor: context.mc.paper,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: MaisonColors.line)),
+                    borderSide: BorderSide(color: context.mc.line)),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: MaisonColors.line)),
+                    borderSide: BorderSide(color: context.mc.line)),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: MaisonColors.accent, width: 1.5)),
+                    borderSide: BorderSide(color: context.mc.accent, width: 1.5)),
               ),
             ),
           ),
@@ -516,11 +573,12 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
             Navigator.of(context).popUntil((route) => route.isFirst);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(edited
-                    ? 'Saved with your corrections ✓'
-                    : 'Saved to your house timeline ✓'),
+                    ? context.l10n.savedCorrectionsSnack
+                    : context.l10n.savedSnack),
                 duration: const Duration(seconds: 2)));
           case AddEntryError(:final message, result: final _?):
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(context.l10n.saveError(message))));
           case _:
             break;
         }
@@ -532,7 +590,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
   Widget _buildBody(BuildContext context, {required bool saving}) {
     final r = result.record;
     return Scaffold(
-      appBar: AppBar(title: Text(_editing ? 'Fix the details' : 'Here\'s what I got')),
+      appBar: AppBar(title: Text(_editing ? context.l10n.confirmTitleEditing : context.l10n.confirmTitle)),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -541,19 +599,19 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
               padding: const EdgeInsets.all(14),
               margin: const EdgeInsets.only(bottom: 14),
               decoration: BoxDecoration(
-                color: MaisonColors.accentWash,
+                color: context.mc.accentWash,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text('You gave me: ${r.rawInput!}',
-                  style: const TextStyle(
-                      fontSize: 13, fontStyle: FontStyle.italic, color: MaisonColors.accentDeep, height: 1.4)),
+              child: Text(context.l10n.youGaveMe(r.rawInput!),
+                  style: TextStyle(
+                      fontSize: 13, fontStyle: FontStyle.italic, color: context.mc.accentDeep, height: 1.4)),
             ),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: MaisonColors.card,
+              color: context.mc.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: MaisonColors.line),
+              border: Border.all(color: context.mc.line),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,23 +623,23 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                       child: Text(r.title,
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
                 ]),
-                const Divider(height: 26, color: MaisonColors.line),
+                Divider(height: 26, color: context.mc.line),
                 if (_editing) ...[
-                  _editRow('Name', _title),
-                  _editRow('Room', _room),
-                  _editRow('Cost', _cost, keyboard: const TextInputType.numberWithOptions(decimal: true)),
-                  _editRow('Vendor', _vendor),
+                  _editRow(context, context.l10n.labelName, _title),
+                  _editRow(context, context.l10n.labelRoom, _room),
+                  _editRow(context, context.l10n.labelCost, _cost, keyboard: const TextInputType.numberWithOptions(decimal: true)),
+                  _editRow(context, context.l10n.labelVendor, _vendor),
                 ] else ...[
-                  _row('What', r.subtitle),
-                  _row('Room', r.room),
-                  if (r.cost != null) _row('Cost', '\$${r.cost!.toStringAsFixed(2)}'),
-                  if (r.vendor != null) _row('Vendor', r.vendor!),
+                  _row(context, context.l10n.labelWhat, r.subtitle),
+                  _row(context, context.l10n.labelRoom, r.room),
+                  if (r.cost != null) _row(context, context.l10n.labelCost, '\$${r.cost!.toStringAsFixed(2)}'),
+                  if (r.vendor != null) _row(context, context.l10n.labelVendor, r.vendor!),
                 ],
-                if (r.modelSerial != null) _row('Serial', r.modelSerial!),
+                if (r.modelSerial != null) _row(context, context.l10n.labelSerial, r.modelSerial!),
                 if (r.warrantyUntil != null)
-                  _row('Warranty', 'Until ${_fmtDate(r.warrantyUntil!)}'),
-                if (r.returnBy != null) _row('Return by', _fmtDate(r.returnBy!)),
-                if (r.manualFound) _row('Manual', 'Found ✓ (attached as PDF)'),
+                  _row(context, context.l10n.labelWarranty, context.l10n.warrantyUntil(_fmtDate(r.warrantyUntil!))),
+                if (r.returnBy != null) _row(context, context.l10n.labelReturnBy, _fmtDate(r.returnBy!)),
+                if (r.manualFound) _row(context, context.l10n.labelManual, context.l10n.manualFound),
               ],
             ),
           ),
@@ -590,19 +648,19 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: MaisonColors.navyWash,
+                color: context.mc.navyWash,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('🔔 Reminders I\'ll set for you',
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: MaisonColors.navy)),
+                  Text(context.l10n.remindersBox,
+                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: context.mc.navy)),
                   const SizedBox(height: 6),
                   ...result.reminders.map((rem) => Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text('•  ${rem.title} — ${_fmtDate(rem.due)}',
-                            style: const TextStyle(fontSize: 13.5, color: MaisonColors.navy, height: 1.4)),
+                            style: TextStyle(fontSize: 13.5, color: context.mc.navy, height: 1.4)),
                       )),
                 ],
               ),
@@ -611,28 +669,28 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
           const SizedBox(height: 14),
           Container(
             decoration: BoxDecoration(
-              color: MaisonColors.card,
+              color: context.mc.card,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: MaisonColors.line),
+              border: Border.all(color: context.mc.line),
             ),
             child: ListTile(
               onTap: _pickRemindDate,
               leading: const Text('🗓️', style: TextStyle(fontSize: 22)),
               title: Text(
-                _remindOn == null ? 'Remind me about this' : 'Reminder on ${_fmtDate(_remindOn!)}',
+                _remindOn == null ? context.l10n.remindMeCard : context.l10n.reminderOnDate(_fmtDate(_remindOn!)),
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
               ),
               subtitle: Text(
                 _remindOn == null
-                    ? 'Optional — pick a follow-up date'
-                    : 'Will appear in Up next',
-                style: const TextStyle(fontSize: 12.5, color: MaisonColors.inkSoft),
+                    ? context.l10n.remindOptional
+                    : context.l10n.willAppearUpNext,
+                style: TextStyle(fontSize: 12.5, color: context.mc.inkSoft),
               ),
               trailing: _remindOn == null
-                  ? const Icon(Icons.add, color: MaisonColors.accentDeep)
+                  ? Icon(Icons.add, color: context.mc.accentDeep)
                   : IconButton(
-                      icon: const Icon(Icons.close, size: 20, color: MaisonColors.inkSoft),
-                      tooltip: 'Remove reminder',
+                      icon: Icon(Icons.close, size: 20, color: context.mc.inkSoft),
+                      tooltip: context.l10n.removeReminder,
                       onPressed: () => setState(() => _remindOn = null),
                     ),
             ),
@@ -646,20 +704,20 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                 : const Icon(Icons.check),
             label: Text(saving
-                ? 'Saving…'
-                : (_editing ? 'Save my corrections' : 'Looks right — save it')),
+                ? context.l10n.savingLabel
+                : (_editing ? context.l10n.saveCorrections : context.l10n.saveButton)),
             onPressed: saving ? null : _save,
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: _editing ? MaisonColors.inkSoft : MaisonColors.accentDeep,
-              side: BorderSide(color: _editing ? MaisonColors.line : MaisonColors.accent),
+              foregroundColor: _editing ? context.mc.inkSoft : context.mc.accentDeep,
+              side: BorderSide(color: _editing ? context.mc.line : context.mc.accent),
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             icon: Icon(_editing ? Icons.undo : Icons.edit_outlined, size: 19),
-            label: Text(_editing ? 'Never mind — keep the AI version' : 'Fix something first'),
+            label: Text(_editing ? context.l10n.keepAiVersion : context.l10n.fixFirst),
             onPressed: () => setState(() {
               if (_editing) {
                 // Revert any edits back to what the AI extracted.

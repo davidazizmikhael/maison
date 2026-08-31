@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
 import '../timeline/timeline_cubit.dart';
 
@@ -11,38 +12,35 @@ class ExportsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<TimelineCubit>().state;
     return Scaffold(
-      appBar: AppBar(title: const Text('Exports')),
+      appBar: AppBar(title: Text(context.l10n.exportsTitle)),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          const Text(
-            'The documents that make the subscription worth it — generated from your timeline in one tap.',
-            style: TextStyle(fontSize: 14.5, color: MaisonColors.inkSoft, height: 1.5),
+          Text(
+            context.l10n.exportsIntro,
+            style: TextStyle(fontSize: 14.5, color: context.mc.inkSoft, height: 1.5),
           ),
           const SizedBox(height: 18),
           _ExportCard(
             emoji: '🛡️',
-            title: 'Warranty claim pack',
-            body:
-                'Receipt, serial number, purchase date and warranty terms for any item — formatted the way the manufacturer asks for it.',
-            cta: 'Generate for an item',
-            onTap: () => _fakeGenerate(context, 'Warranty claim pack'),
+            title: context.l10n.claimPackTitle,
+            body: context.l10n.claimPackBody,
+            cta: context.l10n.claimPackCta,
+            onTap: () => _fakeGenerate(context, context.l10n.claimPackTitle),
           ),
           _ExportCard(
             emoji: '🏠',
-            title: 'Insurance contents inventory',
-            body:
-                'Every item on record with photos, values and receipts — the document every fire or flood victim wishes they had.',
-            cta: 'Generate inventory (${state.records.length} items)',
-            onTap: () => _fakeGenerate(context, 'Insurance inventory'),
+            title: context.l10n.inventoryTitle,
+            body: context.l10n.inventoryBody,
+            cta: context.l10n.inventoryCta(state.records.length),
+            onTap: () => _fakeGenerate(context, context.l10n.inventoryTitle),
           ),
           _ExportCard(
             emoji: '🔑',
-            title: 'House history report',
-            body:
-                'The full maintenance and upgrade story of your home — a trust-builder that adds real value when you sell.',
-            cta: 'Generate house history',
-            onTap: () => _fakeGenerate(context, 'House history report'),
+            title: context.l10n.historyTitle,
+            body: context.l10n.historyBody,
+            cta: context.l10n.historyCta,
+            onTap: () => _fakeGenerate(context, context.l10n.historyTitle),
           ),
         ],
       ),
@@ -53,17 +51,17 @@ class ExportsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: MaisonColors.paper,
+        backgroundColor: context.mc.paper,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('📄  PDF ready', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
         content: Text(
-          '$what generated from your timeline.\n\nIn the real app this opens the iOS share sheet — email it to your insurer, agent, or the manufacturer.',
-          style: const TextStyle(fontSize: 14.5, height: 1.5, color: MaisonColors.inkSoft),
+          context.l10n.pdfBody(what),
+          style: TextStyle(fontSize: 14.5, height: 1.5, color: context.mc.inkSoft),
         ),
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Nice'),
+            child: Text(context.l10n.niceButton),
           ),
         ],
       ),
@@ -85,9 +83,9 @@ class _ExportCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: MaisonColors.card,
+        color: context.mc.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: MaisonColors.line),
+        border: Border.all(color: context.mc.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,12 +96,12 @@ class _ExportCard extends StatelessWidget {
             Expanded(child: Text(title, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800))),
           ]),
           const SizedBox(height: 8),
-          Text(body, style: const TextStyle(fontSize: 13.5, color: MaisonColors.inkSoft, height: 1.5)),
+          Text(body, style: TextStyle(fontSize: 13.5, color: context.mc.inkSoft, height: 1.5)),
           const SizedBox(height: 12),
           OutlinedButton(
             style: OutlinedButton.styleFrom(
-              foregroundColor: MaisonColors.accentDeep,
-              side: const BorderSide(color: MaisonColors.accent),
+              foregroundColor: context.mc.accentDeep,
+              side: BorderSide(color: context.mc.accent),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: onTap,

@@ -59,9 +59,9 @@ class RecordDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: MaisonColors.card,
+                color: context.mc.card,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: MaisonColors.line),
+                border: Border.all(color: context.mc.line),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,7 +70,7 @@ class RecordDetailScreen extends StatelessWidget {
                     const Text('🛡️ Warranty', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800)),
                     const Spacer(),
                     Tag('$warrantyDaysLeft DAYS LEFT',
-                        color: MaisonColors.greenWash, textColor: MaisonColors.green),
+                        color: context.mc.greenWash, textColor: context.mc.green),
                   ]),
                   const SizedBox(height: 12),
                   ClipRRect(
@@ -78,14 +78,14 @@ class RecordDetailScreen extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: warrantyFraction,
                       minHeight: 9,
-                      backgroundColor: MaisonColors.paper,
-                      color: MaisonColors.green,
+                      backgroundColor: context.mc.paper,
+                      color: context.mc.green,
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     'Covered until ${w!.year}. If it breaks, Maison assembles the claim pack — receipt, serial, and terms — in one tap.',
-                    style: const TextStyle(fontSize: 13, color: MaisonColors.inkSoft, height: 1.45),
+                    style: TextStyle(fontSize: 13, color: context.mc.inkSoft, height: 1.45),
                   ),
                 ],
               ),
@@ -96,24 +96,24 @@ class RecordDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: MaisonColors.accentWash,
+                color: context.mc.accentWash,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('ORIGINAL INPUT',
+                  Text('ORIGINAL INPUT',
                       style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.5,
-                          color: MaisonColors.accentDeep)),
+                          color: context.mc.accentDeep)),
                   const SizedBox(height: 6),
                   Text(record.rawInput!,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13.5,
                           fontStyle: FontStyle.italic,
-                          color: MaisonColors.accentDeep,
+                          color: context.mc.accentDeep,
                           height: 1.4)),
                 ],
               ),
@@ -127,15 +127,15 @@ class RecordDetailScreen extends StatelessWidget {
           ].map((item) => Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
-                  color: MaisonColors.card,
+                  color: context.mc.card,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: MaisonColors.line),
+                  border: Border.all(color: context.mc.line),
                 ),
                 child: ListTile(
                   leading: Text(item.$1, style: const TextStyle(fontSize: 22)),
                   title: Text(item.$2, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                  subtitle: Text(item.$3, style: const TextStyle(fontSize: 12.5, color: MaisonColors.inkSoft)),
-                  trailing: const Icon(Icons.chevron_right, color: MaisonColors.inkSoft),
+                  subtitle: Text(item.$3, style: TextStyle(fontSize: 12.5, color: context.mc.inkSoft)),
+                  trailing: Icon(Icons.chevron_right, color: context.mc.inkSoft),
                   onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('${item.$2} — wired to the backend in the real app'))),
                 ),

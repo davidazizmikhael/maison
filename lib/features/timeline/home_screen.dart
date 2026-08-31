@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../add_entry/add_entry_screens.dart';
 import '../exports/exports_screen.dart';
+import '../session/language_sheet.dart';
 import '../session/session_cubit.dart';
 import 'record_detail_screen.dart';
 import 'timeline_cubit.dart';
@@ -25,19 +27,24 @@ class HomeScreen extends StatelessWidget {
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('MAISON',
+                Text('MAISON',
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 2.5,
-                        color: MaisonColors.accentDeep)),
+                        color: context.mc.accentDeep)),
                 Text(address, style: const TextStyle(fontSize: 17)),
               ],
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.ios_share, color: MaisonColors.navy),
-                tooltip: 'Exports',
+                icon: Icon(Icons.language, color: context.mc.navy),
+                tooltip: context.l10n.languageTitle,
+                onPressed: () => showLanguageSheet(context),
+              ),
+              IconButton(
+                icon: Icon(Icons.ios_share, color: context.mc.navy),
+                tooltip: context.l10n.exportsTooltip,
                 onPressed: () => Navigator.of(context)
                     .push(MaterialPageRoute(builder: (_) => const ExportsScreen())),
               ),
@@ -47,10 +54,10 @@ class HomeScreen extends StatelessWidget {
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => showAddSheet(context),
             icon: const Icon(Icons.add_a_photo_outlined),
-            label: const Text('Add', style: TextStyle(fontWeight: FontWeight.w800)),
+            label: Text(context.l10n.addButton, style: const TextStyle(fontWeight: FontWeight.w800)),
           ),
           body: RefreshIndicator(
-            color: MaisonColors.accent,
+            color: context.mc.accent,
             onRefresh: () async {
               if (homeId == null) return;
               await context.read<TimelineCubit>().load(homeId);
@@ -61,18 +68,18 @@ class HomeScreen extends StatelessWidget {
               _HealthCard(state: state),
               if (profile != null) ...[
                 const SizedBox(height: 24),
-                const _SectionTitle('YOUR PLACE'),
+                _SectionTitle(context.l10n.sectionYourPlace),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    ...profile.chips.map((c) => Container(
+                    ...localizedChips(context.l10n, profile).map((c) => Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                           decoration: BoxDecoration(
-                            color: MaisonColors.card,
+                            color: context.mc.card,
                             borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: MaisonColors.line),
+                            border: Border.all(color: context.mc.line),
                           ),
                           child: Text(c,
                               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
@@ -82,7 +89,7 @@ class HomeScreen extends StatelessWidget {
               ],
               if (state.reminders.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                const _SectionTitle('UP NEXT'),
+                _SectionTitle(context.l10n.sectionUpNext),
                 const SizedBox(height: 10),
                 SizedBox(
                   height: 118,
@@ -95,28 +102,28 @@ class HomeScreen extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 24),
-              const _SectionTitle('HOUSE TIMELINE'),
+              _SectionTitle(context.l10n.sectionTimeline),
               const SizedBox(height: 6),
               if (state.records.isEmpty)
                 Container(
                   margin: const EdgeInsets.only(top: 10),
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: MaisonColors.card,
+                    color: context.mc.card,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: MaisonColors.line),
+                    border: Border.all(color: context.mc.line),
                   ),
-                  child: const Column(
+                  child: Column(
                     children: [
                       Text('📸', style: TextStyle(fontSize: 34)),
                       SizedBox(height: 10),
-                      Text('Your logbook is empty',
+                      Text(context.l10n.emptyTitle,
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                       SizedBox(height: 6),
                       Text(
-                        'Walk the house and snap your first nameplate — the furnace is a great start.',
+                        context.l10n.emptyBody,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: MaisonColors.inkSoft, height: 1.45),
+                        style: TextStyle(fontSize: 13, color: context.mc.inkSoft, height: 1.45),
                       ),
                     ],
                   ),
@@ -138,11 +145,11 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(text,
-        style: const TextStyle(
+        style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.8,
-            color: MaisonColors.accentDeep));
+            color: context.mc.accentDeep));
   }
 }
 
@@ -150,7 +157,7 @@ class _HealthCard extends StatelessWidget {
   const _HealthCard({required this.state});
   final TimelineState state;
 
-  Widget _stat(String value, String label) {
+  Widget _stat(BuildContext context, String value, String label) {
     return Expanded(
       child: Column(
         children: [
@@ -181,23 +188,26 @@ class _HealthCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Text('Home health', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
+            Text(context.l10n.homeHealth, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
             const Spacer(),
-            Tag('ON TRACK', color: MaisonColors.greenWash, textColor: MaisonColors.green),
+            Tag(context.l10n.onTrack, color: context.mc.greenWash, textColor: context.mc.green),
           ]),
           const SizedBox(height: 16),
           Row(children: [
-            _stat('${state.records.length}', 'items on record'),
-            _stat('${state.activeWarranties}', 'active warranties'),
+            _stat(context, '${state.records.length}', context.l10n.itemsOnRecord),
+            _stat(context, '${state.activeWarranties}', context.l10n.activeWarranties),
             _stat(
+              context,
               next == null
                   ? '—'
                   : switch (next.daysLeft) {
-                      <= 0 => 'today',
-                      1 => 'tmrw',
-                      final d => '${d}d',
+                      <= 0 => context.l10n.statToday,
+                      1 => context.l10n.statTomorrow,
+                      final d => context.l10n.statDays(d),
                     },
-              next != null && next.daysLeft < 0 ? 'task overdue' : 'until next task',
+              next != null && next.daysLeft < 0
+                  ? context.l10n.taskOverdue
+                  : context.l10n.untilNextTask,
             ),
           ]),
         ],
@@ -217,18 +227,24 @@ class _ReminderCard extends StatelessWidget {
       width: 210,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: MaisonColors.card,
+        color: context.mc.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: MaisonColors.line),
+        border: Border.all(color: context.mc.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
             Tag(
-              reminder.dueLabel,
-              color: urgent ? MaisonColors.accentWash : MaisonColors.navyWash,
-              textColor: urgent ? MaisonColors.accentDeep : MaisonColors.navy,
+              switch (reminder.daysLeft) {
+                < -1 => context.l10n.overdueDays(-reminder.daysLeft),
+                -1 => context.l10n.dueYesterday,
+                0 => context.l10n.dueToday,
+                1 => context.l10n.dueTomorrow,
+                final d => context.l10n.inDays(d),
+              },
+              color: urgent ? context.mc.accentWash : context.mc.navyWash,
+              textColor: urgent ? context.mc.accentDeep : context.mc.navy,
             ),
             if (reminder.seasonal) ...[
               const Spacer(),
@@ -244,7 +260,7 @@ class _ReminderCard extends StatelessWidget {
           Text(reminder.detail,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: MaisonColors.inkSoft, height: 1.35)),
+              style: TextStyle(fontSize: 12, color: context.mc.inkSoft, height: 1.35)),
         ],
       ),
     );
@@ -260,9 +276,9 @@ class _RecordTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
-        color: MaisonColors.card,
+        color: context.mc.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: MaisonColors.line),
+        border: Border.all(color: context.mc.line),
       ),
       child: ListTile(
         onTap: () => Navigator.of(context)
@@ -273,7 +289,7 @@ class _RecordTile extends StatelessWidget {
           height: 46,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: MaisonColors.paper,
+            color: context.mc.paper,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(record.emoji, style: const TextStyle(fontSize: 22)),
@@ -292,14 +308,14 @@ class _RecordTile extends StatelessWidget {
               Tag(record.room),
               if (record.cost != null)
                 Tag('\$${record.cost!.toStringAsFixed(record.cost! % 1 == 0 ? 0 : 2)}',
-                    color: MaisonColors.greenWash, textColor: MaisonColors.green),
+                    color: context.mc.greenWash, textColor: context.mc.green),
               if (record.warrantyUntil != null)
                 Tag('Warranty → ${record.warrantyUntil!.year}',
-                    color: MaisonColors.accentWash, textColor: MaisonColors.accentDeep),
+                    color: context.mc.accentWash, textColor: context.mc.accentDeep),
             ],
           ),
         ),
-        trailing: const Icon(Icons.chevron_right, color: MaisonColors.inkSoft),
+        trailing: Icon(Icons.chevron_right, color: context.mc.inkSoft),
       ),
     );
   }

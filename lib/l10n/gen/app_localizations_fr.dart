@@ -1,0 +1,437 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for French (`fr`).
+class AppLocalizationsFr extends AppLocalizations {
+  AppLocalizationsFr([String locale = 'fr']) : super(locale);
+
+  @override
+  String get sectionYourPlace => 'CHEZ VOUS';
+
+  @override
+  String get sectionUpNext => 'À VENIR';
+
+  @override
+  String get sectionTimeline => 'HISTORIQUE DE LA MAISON';
+
+  @override
+  String get homeHealth => 'Santé de la maison';
+
+  @override
+  String get onTrack => 'EN ORDRE';
+
+  @override
+  String get itemsOnRecord => 'articles au dossier';
+
+  @override
+  String get activeWarranties => 'garanties actives';
+
+  @override
+  String get untilNextTask => 'avant la prochaine tâche';
+
+  @override
+  String get taskOverdue => 'tâche en retard';
+
+  @override
+  String get statToday => 'auj.';
+
+  @override
+  String get statTomorrow => 'demain';
+
+  @override
+  String statDays(int days) {
+    return '${days}j';
+  }
+
+  @override
+  String get addButton => 'Ajouter';
+
+  @override
+  String get exportsTooltip => 'Exports';
+
+  @override
+  String get languageTitle => 'Langue';
+
+  @override
+  String get languageSystem => 'Réglage de l\'appareil';
+
+  @override
+  String get emptyTitle => 'Votre carnet est vide';
+
+  @override
+  String get emptyBody =>
+      'Faites le tour de la maison et photographiez votre première plaque — la fournaise est un bon départ.';
+
+  @override
+  String get dueToday => 'POUR AUJOURD\'HUI';
+
+  @override
+  String get dueTomorrow => 'POUR DEMAIN';
+
+  @override
+  String get dueYesterday => 'DUE HIER';
+
+  @override
+  String overdueDays(int days) {
+    return 'EN RETARD DE $days JOURS';
+  }
+
+  @override
+  String inDays(int days) {
+    return 'DANS $days JOURS';
+  }
+
+  @override
+  String chipBedrooms(int n) {
+    return '🛏 $n chambres';
+  }
+
+  @override
+  String chipBathrooms(String n) {
+    return '🚿 $n salles de bain';
+  }
+
+  @override
+  String get chipGarage => '🚗 Garage';
+
+  @override
+  String get chipBasement => '🔦 Sous-sol';
+
+  @override
+  String get addSheetTitle => 'Ajouter à votre carnet';
+
+  @override
+  String get addSheetSubtitle =>
+      'Aucun formulaire. Photographiez, ou dites-le simplement.';
+
+  @override
+  String get optionNameplate => 'Numériser une plaque signalétique';
+
+  @override
+  String get optionNameplateSub =>
+      'Fournaise, chauffe-eau, clim — l\'IA trouve le modèle et le manuel';
+
+  @override
+  String get optionReceipt => 'Numériser un reçu ou une facture';
+
+  @override
+  String get optionReceiptSub =>
+      'Garantie et délai de retour extraits automatiquement';
+
+  @override
+  String get optionNote => 'Note rapide';
+
+  @override
+  String get optionNoteSub => 'Écrivez comme un texto — l\'IA le structure';
+
+  @override
+  String get scanNameplateTitle => 'Numériser la plaque';
+
+  @override
+  String get scanReceiptTitle => 'Numériser le reçu';
+
+  @override
+  String get chooseFromLibrary => 'Choisir dans la photothèque';
+
+  @override
+  String get hintNameplateLive =>
+      'Cadrez la plaque métallique de l\'appareil,\npuis touchez le déclencheur pour ouvrir l\'appareil photo.';
+
+  @override
+  String get hintReceiptLive =>
+      'Aplatissez le reçu sous un bon éclairage,\npuis touchez le déclencheur pour ouvrir l\'appareil photo.';
+
+  @override
+  String get hintNameplateDemo =>
+      'Cadrez la plaque métallique de l\'appareil.\nMode démo : une plaque de fournaise est préchargée.';
+
+  @override
+  String get hintReceiptDemo =>
+      'Aplatissez le reçu dans le cadre.\nMode démo : un reçu Canadian Tire est préchargé.';
+
+  @override
+  String cameraUnavailable(String error) {
+    return 'Appareil photo indisponible — essayez la photothèque. ($error)';
+  }
+
+  @override
+  String photoReadError(String error) {
+    return 'Impossible de lire cette photo. ($error)';
+  }
+
+  @override
+  String get quickNoteTitle => 'Note rapide';
+
+  @override
+  String get quickNoteHint => 'Écrivez comme si vous textiez un ami.';
+
+  @override
+  String get quickNoteButton => 'Laissez Maison le classer';
+
+  @override
+  String get stepReadingNameplate => 'Lecture de la plaque…';
+
+  @override
+  String get stepIdentifyingModel => 'Identification du modèle…';
+
+  @override
+  String get stepFindingManual => 'Recherche du manuel…';
+
+  @override
+  String get stepCheckingRecalls => 'Vérification des rappels…';
+
+  @override
+  String get stepScanningReceipt => 'Numérisation du reçu…';
+
+  @override
+  String get stepExtractingItems => 'Extraction des articles et prix…';
+
+  @override
+  String get stepReadingWarranty => 'Lecture des conditions de garantie…';
+
+  @override
+  String get stepTrackingReturn => 'Suivi du délai de retour…';
+
+  @override
+  String get stepReadingNote => 'Lecture de votre note…';
+
+  @override
+  String get stepExtractingDetails => 'Extraction des détails…';
+
+  @override
+  String get stepFilingRoom => 'Classement dans la bonne pièce…';
+
+  @override
+  String get confirmTitle => 'Voici ce que j\'ai trouvé';
+
+  @override
+  String get confirmTitleEditing => 'Corrigez les détails';
+
+  @override
+  String youGaveMe(String input) {
+    return 'Vous m\'avez donné : $input';
+  }
+
+  @override
+  String get labelWhat => 'Quoi';
+
+  @override
+  String get labelName => 'Nom';
+
+  @override
+  String get labelRoom => 'Pièce';
+
+  @override
+  String get labelCost => 'Coût';
+
+  @override
+  String get labelVendor => 'Fournisseur';
+
+  @override
+  String get labelSerial => 'N° de série';
+
+  @override
+  String get labelWarranty => 'Garantie';
+
+  @override
+  String warrantyUntil(String date) {
+    return 'Jusqu\'au $date';
+  }
+
+  @override
+  String get labelReturnBy => 'Retour avant';
+
+  @override
+  String get labelManual => 'Manuel';
+
+  @override
+  String get manualFound => 'Trouvé ✓ (PDF joint)';
+
+  @override
+  String get remindersBox => '🔔 Rappels que je vais créer';
+
+  @override
+  String get remindMeCard => 'Me le rappeler';
+
+  @override
+  String reminderOnDate(String date) {
+    return 'Rappel le $date';
+  }
+
+  @override
+  String get remindOptional => 'Facultatif — choisissez une date de suivi';
+
+  @override
+  String get willAppearUpNext => 'Apparaîtra dans À venir';
+
+  @override
+  String get removeReminder => 'Retirer le rappel';
+
+  @override
+  String get followUpDetail => 'Suivi défini lors de l\'enregistrement';
+
+  @override
+  String get saveButton => 'C\'est bon — enregistrer';
+
+  @override
+  String get saveCorrections => 'Enregistrer mes corrections';
+
+  @override
+  String get savingLabel => 'Enregistrement…';
+
+  @override
+  String get fixFirst => 'Corriger quelque chose';
+
+  @override
+  String get keepAiVersion => 'Finalement, garder la version IA';
+
+  @override
+  String get savedSnack => 'Enregistré dans votre historique ✓';
+
+  @override
+  String get savedCorrectionsSnack => 'Enregistré avec vos corrections ✓';
+
+  @override
+  String parseError(String error) {
+    return 'Analyse impossible — vérifiez votre connexion et réessayez. ($error)';
+  }
+
+  @override
+  String saveError(String error) {
+    return 'Enregistrement impossible — réessayez. ($error)';
+  }
+
+  @override
+  String get exportsTitle => 'Exports';
+
+  @override
+  String get exportsIntro =>
+      'Les documents qui justifient l\'abonnement — générés depuis votre historique en un geste.';
+
+  @override
+  String get claimPackTitle => 'Dossier de réclamation de garantie';
+
+  @override
+  String get claimPackBody =>
+      'Reçu, numéro de série, date d\'achat et conditions de garantie — dans le format exigé par le fabricant.';
+
+  @override
+  String get claimPackCta => 'Générer pour un article';
+
+  @override
+  String get inventoryTitle => 'Inventaire pour l\'assurance';
+
+  @override
+  String get inventoryBody =>
+      'Chaque article au dossier avec photos, valeurs et reçus — le document que toute victime d\'incendie ou d\'inondation aurait voulu avoir.';
+
+  @override
+  String inventoryCta(int n) {
+    return 'Générer l\'inventaire ($n articles)';
+  }
+
+  @override
+  String get historyTitle => 'Rapport d\'historique de la maison';
+
+  @override
+  String get historyBody =>
+      'Tout l\'entretien et les améliorations de votre maison — un gage de confiance qui ajoute de la valeur à la revente.';
+
+  @override
+  String get historyCta => 'Générer l\'historique';
+
+  @override
+  String get pdfReady => '📄  PDF prêt';
+
+  @override
+  String pdfBody(String what) {
+    return '$what généré depuis votre historique.\n\nDans l\'application réelle, la feuille de partage iOS s\'ouvre — envoyez-le à votre assureur, courtier ou au fabricant.';
+  }
+
+  @override
+  String get niceButton => 'Super';
+
+  @override
+  String get obWelcomeTitle => 'Photographiez.\nMaison classe.\nPour toujours.';
+
+  @override
+  String get obWelcomeBody =>
+      'Chaque appareil, reçu, réparation et garantie de votre maison — photographié une fois, organisé pour de bon.';
+
+  @override
+  String get obWhereTitle => 'Où est votre chez-vous ?';
+
+  @override
+  String get obWhereBody =>
+      'Un carnet par maison. Vous pourrez ajouter un condo, un logement loué ou un chalet plus tard.';
+
+  @override
+  String get obAddressHint => 'Adresse';
+
+  @override
+  String get obDescribeTitle => 'Décrivez votre logement\ncomme à un ami.';
+
+  @override
+  String get obDescribeBody =>
+      'Pas de sélecteurs, pas de menus. Maison transforme vos mots en profil de votre logement — pièces, listes et rappels en découlent.';
+
+  @override
+  String get obStructureIt => 'Structurer';
+
+  @override
+  String get obStructuring => 'Structuration…';
+
+  @override
+  String get obHeresYourPlace => 'VOICI VOTRE LOGEMENT';
+
+  @override
+  String get obWrongEdit =>
+      'Une erreur ? Modifiez la phrase et structurez de nouveau. Maison affine ce profil au fil de vos ajouts.';
+
+  @override
+  String get obHowTitle => 'Trois façons de consigner.\nZéro formulaire.';
+
+  @override
+  String get obHow1Title => 'Photographiez une plaque';
+
+  @override
+  String get obHow1Body =>
+      'L\'IA lit le modèle et le numéro de série, trouve le manuel et planifie l\'entretien.';
+
+  @override
+  String get obHow2Title => 'Photographiez un reçu';
+
+  @override
+  String get obHow2Body =>
+      'Prix, magasin, fin de garantie et délai de retour — extraits et suivis.';
+
+  @override
+  String get obHow3Title => 'Écrivez une note';
+
+  @override
+  String get obHow3Body =>
+      '« Chauffe-eau remplacé, 1 850 \$, Plomberie Joe » devient un dossier structuré.';
+
+  @override
+  String get obContinue => 'Continuer';
+
+  @override
+  String get obStartProfile => 'Créer mon profil maison';
+
+  @override
+  String get obSettingUp => 'Création de votre maison…';
+
+  @override
+  String obCreateError(String error) {
+    return 'Impossible de créer votre maison — vérifiez votre connexion. ($error)';
+  }
+
+  @override
+  String get bootCantReach => 'Impossible d\'accéder à votre carnet';
+
+  @override
+  String get bootTryAgain => 'Réessayer';
+}

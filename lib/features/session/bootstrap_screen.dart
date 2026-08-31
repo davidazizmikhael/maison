@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../timeline/home_screen.dart';
@@ -54,8 +55,8 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('Couldn\'t reach your logbook',
-                            style: TextStyle(
+                        Text(context.l10n.bootCantReach,
+                            style: const TextStyle(
                                 color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 10),
                         Text(state.message,
@@ -67,7 +68,7 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
                         const SizedBox(height: 20),
                         FilledButton(
                           onPressed: () => context.read<SessionCubit>().start(),
-                          child: const Text('Try again'),
+                          child: Text(context.l10n.bootTryAgain),
                         ),
                       ],
                     ),

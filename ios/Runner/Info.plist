@@ -14,6 +14,11 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>fr</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>maison</string>
 	<key>CFBundlePackageType</key>
@@ -26,6 +31,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Maison uses the camera to snap appliance nameplates and receipts so AI can file them for you.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose an existing photo of a nameplate or receipt to add it to your logbook.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
