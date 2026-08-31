@@ -47,7 +47,22 @@ class Reminder {
   final DateTime due;
   final bool seasonal;
 
-  int get daysLeft => due.difference(DateTime.now()).inDays;
+  /// Whole calendar days until due (0 = today, negative = overdue),
+  /// computed date-to-date so time of day never skews it.
+  int get daysLeft {
+    final now = DateTime.now();
+    return DateTime(due.year, due.month, due.day)
+        .difference(DateTime(now.year, now.month, now.day))
+        .inDays;
+  }
+
+  String get dueLabel => switch (daysLeft) {
+        < -1 => 'OVERDUE ${-daysLeft} DAYS',
+        -1 => 'DUE YESTERDAY',
+        0 => 'DUE TODAY',
+        1 => 'DUE TOMORROW',
+        final d => 'IN $d DAYS',
+      };
 }
 
 /// A canned "AI" parse result the demo pretends to extract.
@@ -130,6 +145,12 @@ class AppState extends ChangeNotifier {
   /// Row id of the home in Supabase; null in demo mode until onboarding ends.
   String? homeId;
 
+  /// Wired in main.dart to NotificationService.sync — keeps scheduled local
+  /// notifications mirroring the reminder list without an import cycle.
+  static void Function(List<Reminder>)? onRemindersChanged;
+
+  void _remindersChanged() => onRemindersChanged?.call(List.unmodifiable(reminders));
+
   void setProfile(HomeProfile p) {
     profile = p;
     notifyListeners();
@@ -144,6 +165,7 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(newReminders)
       ..sort((a, b) => a.due.compareTo(b.due));
+    _remindersChanged();
     notifyListeners();
   }
   final List<HomeRecord> records = [];
@@ -211,6 +233,7 @@ class AppState extends ChangeNotifier {
         ),
     ]);
     reminders.sort((a, b) => a.due.compareTo(b.due));
+    _remindersChanged();
     notifyListeners();
   }
 
@@ -218,6 +241,7 @@ class AppState extends ChangeNotifier {
     records.insert(0, result.record);
     reminders.addAll(result.reminders);
     reminders.sort((a, b) => a.due.compareTo(b.due));
+    _remindersChanged();
     notifyListeners();
   }
 }

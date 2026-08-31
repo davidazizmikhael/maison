@@ -186,7 +186,16 @@ class _HealthCard extends StatelessWidget {
           Row(children: [
             _stat('${state.records.length}', 'items on record'),
             _stat('${state.activeWarranties}', 'active warranties'),
-            _stat(next == null ? '—' : '${next.daysLeft}d', 'until next task'),
+            _stat(
+              next == null
+                  ? '—'
+                  : switch (next.daysLeft) {
+                      <= 0 => 'today',
+                      1 => 'tmrw',
+                      final d => '${d}d',
+                    },
+              next != null && next.daysLeft < 0 ? 'task overdue' : 'until next task',
+            ),
           ]),
         ],
       ),
@@ -214,7 +223,7 @@ class _ReminderCard extends StatelessWidget {
         children: [
           Row(children: [
             Tag(
-              urgent ? 'DUE IN ${reminder.daysLeft} DAYS' : 'IN ${reminder.daysLeft} DAYS',
+              reminder.dueLabel,
               color: urgent ? MaisonColors.accentWash : MaisonColors.navyWash,
               textColor: urgent ? MaisonColors.accentDeep : MaisonColors.navy,
             ),
