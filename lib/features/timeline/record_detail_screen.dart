@@ -11,6 +11,29 @@ import '../exports/export_actions.dart';
 import 'edit_record_screen.dart';
 import 'timeline_cubit.dart';
 
+/// The warranty bar's model: time remaining as a fraction of the known
+/// coverage span (addedOn → warrantyUntil). Null when expired or absent.
+class WarrantyProgress {
+  const WarrantyProgress(
+      {required this.daysLeft, required this.totalDays, required this.progress});
+  final int daysLeft;
+  final int totalDays;
+
+  /// 1.0 = full coverage remaining, draining toward expiry (min 0.05 so a
+  /// nearly-expired warranty stays visible).
+  final double progress;
+}
+
+WarrantyProgress? calculateWarrantyProgress(HomeRecord record, {DateTime? now}) {
+  final w = record.warrantyUntil;
+  final n = now ?? DateTime.now();
+  if (w == null || !w.isAfter(n)) return null;
+  final daysLeft = w.difference(n).inDays;
+  final totalDays = w.difference(record.addedOn).inDays.clamp(1, 3650);
+  final progress = (daysLeft / totalDays).clamp(0.05, 1.0).toDouble();
+  return WarrantyProgress(daysLeft: daysLeft, totalDays: totalDays, progress: progress);
+}
+
 class RecordDetailScreen extends StatelessWidget {
   const RecordDetailScreen({super.key, required this.record});
   final HomeRecord record;
@@ -75,16 +98,9 @@ class RecordDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final w = record.warrantyUntil;
-    final now = DateTime.now();
-    double? warrantyFraction;
-    int? warrantyDaysLeft;
-    if (w != null && w.isAfter(now)) {
-      warrantyDaysLeft = w.difference(now).inDays;
-      // The bar shows time REMAINING: full when the warranty is fresh,
-      // draining toward expiry (addedOn approximates the purchase date).
-      final total = w.difference(record.addedOn).inDays.clamp(1, 3650);
-      warrantyFraction = (warrantyDaysLeft / total).clamp(0.05, 1.0);
-    }
+    final warranty = calculateWarrantyProgress(record);
+    final warrantyFraction = warranty?.progress;
+    final warrantyDaysLeft = warranty?.daysLeft;
 
     return Scaffold(
       appBar: AppBar(
