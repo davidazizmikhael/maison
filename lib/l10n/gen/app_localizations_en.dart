@@ -507,4 +507,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editRecord => 'Edit record';
+
+  @override
+  String get comingSoon => 'Coming soon';
 }

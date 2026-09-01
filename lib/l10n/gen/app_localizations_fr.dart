@@ -508,4 +508,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get editRecord => 'Modifier l\'enregistrement';
+
+  @override
+  String get comingSoon => 'Bientôt disponible';
 }

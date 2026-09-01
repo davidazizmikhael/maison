@@ -102,6 +102,13 @@ void main() {
     await waitFor(tester, find.text('View manual'));
     await shot(tester, '10-record-detail');
 
+    // 5a — Export the claim pack straight from the record
+    await tester.tap(find.text('Warranty claim pack'));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('📄  PDF ready'));
+    await tester.tap(find.text('Nice'));
+    await tester.pumpAndSettle();
+
     // 5b — Edit the record after saving: change the room, save
     await tester.tap(find.byIcon(Icons.edit_outlined));
     await tester.pumpAndSettle();

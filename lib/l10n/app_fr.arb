@@ -147,5 +147,6 @@
   "pdfMaintenanceLog": "Journal d'entretien",
   "pdfDoneOn": "Fait le {date}",
   "tapToSet": "Toucher pour définir",
-  "editRecord": "Modifier l'enregistrement"
+  "editRecord": "Modifier l'enregistrement",
+  "comingSoon": "Bientôt disponible"
 }

@@ -985,6 +985,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit record'**
   String get editRecord;
+
+  /// No description provided for @comingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get comingSoon;
 }
 
 class _AppLocalizationsDelegate

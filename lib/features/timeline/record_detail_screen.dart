@@ -7,6 +7,7 @@ import '../../data/backend.dart';
 import '../../core/l10n_ext.dart';
 import '../../data/models.dart';
 import '../session/session_cubit.dart';
+import '../exports/export_actions.dart';
 import 'edit_record_screen.dart';
 import 'timeline_cubit.dart';
 
@@ -47,6 +48,28 @@ class RecordDetailScreen extends StatelessWidget {
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(snack), duration: const Duration(seconds: 2)));
+  }
+
+  Widget _actionTile(BuildContext context, String emoji, String title, String subtitle,
+      {required VoidCallback onTap}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: context.mc.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.mc.line),
+      ),
+      child: ListTile(
+        leading: Text(emoji, style: const TextStyle(fontSize: 22)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+        subtitle: Text(subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12.5, color: context.mc.inkSoft)),
+        trailing: Icon(Icons.chevron_right, color: context.mc.inkSoft),
+        onTap: onTap,
+      ),
+    );
   }
 
   @override
@@ -183,26 +206,12 @@ class RecordDetailScreen extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          ...[
-            ('📖', 'View manual', record.manualFound ? 'PDF attached' : 'Not found yet'),
-            ('🔔', 'Reminders', 'Manage the schedule for this item'),
-            ('📄', 'Export claim pack', 'Receipt + serial + warranty terms as PDF'),
-          ].map((item) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: context.mc.card,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: context.mc.line),
-                ),
-                child: ListTile(
-                  leading: Text(item.$1, style: const TextStyle(fontSize: 22)),
-                  title: Text(item.$2, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                  subtitle: Text(item.$3, style: TextStyle(fontSize: 12.5, color: context.mc.inkSoft)),
-                  trailing: Icon(Icons.chevron_right, color: context.mc.inkSoft),
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${item.$2} — wired to the backend in the real app'))),
-                ),
-              )),
+          _actionTile(context, '📄', context.l10n.claimPackTitle, context.l10n.claimPackBody,
+              onTap: () => shareClaimPack(context, record)),
+          _actionTile(context, '📖', 'View manual',
+              record.manualFound ? 'PDF attached' : context.l10n.comingSoon,
+              onTap: () => ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(context.l10n.comingSoon)))),
         ],
       ),
     );

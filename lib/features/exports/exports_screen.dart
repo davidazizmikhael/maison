@@ -2,14 +2,13 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:printing/printing.dart';
-
 import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
 import '../../data/models.dart';
 import '../session/session_cubit.dart';
 import '../timeline/timeline_cubit.dart';
+import 'export_actions.dart';
 import 'pdf_builder.dart';
 
 class ExportsScreen extends StatefulWidget {
@@ -41,7 +40,7 @@ class _ExportsScreenState extends State<ExportsScreen> {
     try {
       final bytes = await build();
       if (!mounted) return;
-      await _readyDialog(what: what, bytes: bytes, filename: filename);
+      await showPdfReadyDialog(context, what: what, bytes: bytes, filename: filename);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -50,34 +49,6 @@ class _ExportsScreenState extends State<ExportsScreen> {
     } finally {
       if (mounted) setState(() => _busy = null);
     }
-  }
-
-  Future<void> _readyDialog(
-      {required String what, required Uint8List bytes, required String filename}) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: dialogContext.mc.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text(dialogContext.l10n.pdfReady,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-        content: Text(dialogContext.l10n.pdfBody(what),
-            style: TextStyle(fontSize: 14.5, height: 1.5, color: dialogContext.mc.inkSoft)),
-        actions: [
-          TextButton.icon(
-            icon: Icon(Icons.ios_share, size: 18, color: dialogContext.mc.accentDeep),
-            label: Text(dialogContext.l10n.shareButton,
-                style: TextStyle(
-                    color: dialogContext.mc.accentDeep, fontWeight: FontWeight.w700)),
-            onPressed: () => Printing.sharePdf(bytes: bytes, filename: filename),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(dialogContext.l10n.niceButton),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _claimPack() async {
