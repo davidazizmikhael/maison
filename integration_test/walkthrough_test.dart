@@ -101,8 +101,18 @@ void main() {
     await tester.pumpAndSettle();
     await waitFor(tester, find.text('View manual'));
     await shot(tester, '10-record-detail');
-    await tester.pageBack();
+
+    // 5b — Edit the record after saving: change the room, save
+    await tester.tap(find.byIcon(Icons.edit_outlined));
     await tester.pumpAndSettle();
+    await shot(tester, '10b-edit-record');
+    await tester.tap(find.byKey(const Key('room-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kitchen').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save my corrections'));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('Add')); // back on the timeline
 
     // 6 — Quick note flow
     await tester.tap(find.text('Add'));

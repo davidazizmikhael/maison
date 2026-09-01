@@ -272,5 +272,6 @@
       }
     }
   },
-  "tapToSet": "Tap to set"
+  "tapToSet": "Tap to set",
+  "editRecord": "Edit record"
 }

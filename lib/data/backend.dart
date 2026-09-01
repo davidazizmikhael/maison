@@ -47,6 +47,9 @@ abstract class Backend {
   /// Raw photo bytes for embedding into PDFs (null in demo mode).
   Future<Uint8List?> photoBytes(String path);
 
+  /// Persists user edits to an existing record.
+  Future<void> updateRecord(HomeRecord record);
+
   Future<void> completeReminder(String reminderId);
   Future<void> snoozeReminder(String reminderId, DateTime newDue);
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId);
@@ -89,6 +92,9 @@ class MockBackend implements Backend {
 
   @override
   Future<Uint8List?> photoBytes(String path) async => null;
+
+  @override
+  Future<void> updateRecord(HomeRecord record) async {}
 
   @override
   Future<void> completeReminder(String reminderId) async {}
@@ -268,6 +274,19 @@ class SupabaseBackend implements Backend {
     } catch (_) {
       return null;
     }
+  }
+
+  @override
+  Future<void> updateRecord(HomeRecord record) async {
+    final id = record.id;
+    if (id == null) return;
+    await _db.from('records').update({
+      'title': record.title,
+      'room': record.room,
+      'cost': record.cost,
+      'vendor': record.vendor,
+      'warranty_until': record.warrantyUntil?.toIso8601String().substring(0, 10),
+    }).eq('id', id);
   }
 
   @override

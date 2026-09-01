@@ -124,11 +124,15 @@ class HomeScreen extends StatelessWidget {
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           Icon(Icons.check, size: 14, color: context.mc.green),
                           const SizedBox(width: 5),
-                          Text(r.title,
-                              style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: context.mc.green)),
+                          Flexible(
+                            child: Text(r.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: context.mc.green)),
+                          ),
                         ]),
                       ),
                   ],

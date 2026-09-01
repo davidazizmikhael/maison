@@ -979,6 +979,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to set'**
   String get tapToSet;
+
+  /// No description provided for @editRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit record'**
+  String get editRecord;
 }
 
 class _AppLocalizationsDelegate

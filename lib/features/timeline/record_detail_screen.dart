@@ -7,6 +7,7 @@ import '../../data/backend.dart';
 import '../../core/l10n_ext.dart';
 import '../../data/models.dart';
 import '../session/session_cubit.dart';
+import 'edit_record_screen.dart';
 import 'timeline_cubit.dart';
 
 class RecordDetailScreen extends StatelessWidget {
@@ -65,6 +66,12 @@ class RecordDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(record.room),
         actions: [
+          IconButton(
+            icon: Icon(Icons.edit_outlined, color: context.mc.navy),
+            tooltip: context.l10n.editRecord,
+            onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => EditRecordScreen(record: record))),
+          ),
           IconButton(
             icon: Icon(Icons.delete_outline, color: context.mc.red),
             tooltip: context.l10n.deleteRecord,

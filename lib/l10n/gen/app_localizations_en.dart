@@ -504,4 +504,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tapToSet => 'Tap to set';
+
+  @override
+  String get editRecord => 'Edit record';
 }

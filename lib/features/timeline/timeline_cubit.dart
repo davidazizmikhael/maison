@@ -70,6 +70,18 @@ class TimelineCubit extends Cubit<TimelineState> {
     }
   }
 
+  Future<void> updateRecord(HomeRecord original, HomeRecord updated, {String? homeId}) async {
+    await _backend.updateRecord(updated);
+    if (BackendConfig.enabled && homeId != null) {
+      await load(homeId);
+    } else {
+      _emitSynced(
+        [for (final r in state.records) identical(r, original) ? updated : r],
+        state.reminders,
+      );
+    }
+  }
+
   Future<void> completeReminder(Reminder reminder, {String? homeId}) async {
     if (BackendConfig.enabled && reminder.id != null) {
       await _backend.completeReminder(reminder.id!);

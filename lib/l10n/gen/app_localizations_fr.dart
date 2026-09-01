@@ -505,4 +505,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get tapToSet => 'Toucher pour définir';
+
+  @override
+  String get editRecord => 'Modifier l\'enregistrement';
 }
