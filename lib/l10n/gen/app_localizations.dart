@@ -107,7 +107,7 @@ abstract class AppLocalizations {
   /// No description provided for @sectionUpNext.
   ///
   /// In en, this message translates to:
-  /// **'UP NEXT'**
+  /// **'Up next'**
   String get sectionUpNext;
 
   /// No description provided for @sectionTimeline.
@@ -1039,6 +1039,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Apple sign-in isn\'t enabled in this build yet — coming with the beta.'**
   String get appleUnavailable;
+
+  /// No description provided for @composeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add anything — type it or snap it'**
+  String get composeHint;
+
+  /// No description provided for @fileIt.
+  ///
+  /// In en, this message translates to:
+  /// **'File it'**
+  String get fileIt;
+
+  /// No description provided for @newEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New entry'**
+  String get newEntryTitle;
+
+  /// No description provided for @doneShort.
+  ///
+  /// In en, this message translates to:
+  /// **'done'**
+  String get doneShort;
+
+  /// No description provided for @todayHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get todayHeader;
 }
 
 class _AppLocalizationsDelegate

@@ -13,8 +13,33 @@ import '../session/session_cubit.dart';
 import 'record_detail_screen.dart';
 import 'timeline_cubit.dart';
 
+/// The house journal: a Notes-style document — header, checklist, dated
+/// entries, and a compose bar. No cards, hairlines only.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  String _profileSummary(BuildContext context, HomeProfile p) {
+    // The chips carry emoji for chip UI; the document header wants plain text.
+    return localizedChips(context.l10n, p)
+        .map((c) => c.replaceFirst(RegExp(r'^\S+\s'), ''))
+        .join(' · ');
+  }
+
+  String _dueShort(BuildContext context, Reminder r) {
+    final d = r.daysLeft;
+    if (d <= 0) return context.l10n.statToday;
+    if (d == 1) return context.l10n.statTomorrow;
+    return context.l10n.statDays(d);
+  }
+
+  String _dateHeader(BuildContext context, DateTime d) {
+    final now = DateTime.now();
+    if (d.year == now.year && d.month == now.month && d.day == now.day) {
+      return context.l10n.todayHeader;
+    }
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[d.month - 1]} ${d.day}${d.year == now.year ? '' : ', ${d.year}'}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,158 +49,100 @@ class HomeScreen extends StatelessWidget {
     final homeId = session is SessionReady ? session.homeId : null;
     return BlocBuilder<TimelineCubit, TimelineState>(
       builder: (context, state) {
+        // Group records by calendar day, newest first (list is already sorted).
+        final groups = <String, List<HomeRecord>>{};
+        for (final r in state.records) {
+          groups.putIfAbsent(_dateHeader(context, r.addedOn), () => []).add(r);
+        }
+        final completedPreview = state.completed.take(3).toList();
         return Scaffold(
           appBar: AppBar(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('MAISON',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2.5,
-                        color: context.mc.accentDeep)),
-                Text(address, style: const TextStyle(fontSize: 17)),
-              ],
-            ),
+            toolbarHeight: 44,
             actions: [
               if (BackendConfig.enabled)
                 IconButton(
-                  icon: Icon(Icons.person_outline, color: context.mc.navy),
+                  icon: Icon(Icons.person_outline, size: 22, color: context.mc.inkSoft),
                   tooltip: context.l10n.accountTitle,
                   onPressed: () => showAccountSheet(context),
                 ),
               IconButton(
-                icon: Icon(Icons.language, color: context.mc.navy),
+                icon: Icon(Icons.language, size: 22, color: context.mc.inkSoft),
                 tooltip: context.l10n.languageTitle,
                 onPressed: () => showLanguageSheet(context),
               ),
               IconButton(
-                icon: Icon(Icons.ios_share, color: context.mc.navy),
+                icon: Icon(Icons.ios_share, size: 22, color: context.mc.inkSoft),
                 tooltip: context.l10n.exportsTooltip,
                 onPressed: () => Navigator.of(context)
                     .push(MaterialPageRoute(builder: (_) => const ExportsScreen())),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 8),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => showAddSheet(context),
-            icon: const Icon(Icons.add_a_photo_outlined),
-            label: Text(context.l10n.addButton, style: const TextStyle(fontWeight: FontWeight.w800)),
-          ),
-          body: RefreshIndicator(
-            color: context.mc.accent,
-            onRefresh: () async {
-              if (homeId == null) return;
-              await context.read<TimelineCubit>().load(homeId);
-            },
-            child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+          body: Column(
             children: [
-              _HealthCard(state: state),
-              if (profile != null) ...[
-                const SizedBox(height: 24),
-                _SectionTitle(context.l10n.sectionYourPlace),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ...localizedChips(context.l10n, profile).map((c) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: context.mc.card,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: context.mc.line),
-                          ),
-                          child: Text(c,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                        )),
-                  ],
-                ),
-              ],
-              if (state.pending.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                _SectionTitle(context.l10n.sectionUpNext),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 118,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: state.pending.length,
-                    clipBehavior: Clip.none,
-                    separatorBuilder: (context, index) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => _ReminderCard(
-                        reminder: state.pending[i],
-                        onTap: () =>
-                            _showReminderActions(context, state.pending[i], homeId)),
-                  ),
-                ),
-              ],
-              if (state.completed.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                _SectionTitle(context.l10n.sectionCompleted),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final r in state.completed)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: context.mc.greenWash,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.check, size: 14, color: context.mc.green),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(r.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: context.mc.green)),
-                          ),
-                        ]),
-                      ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 24),
-              _SectionTitle(context.l10n.sectionTimeline),
-              const SizedBox(height: 6),
-              if (state.records.isEmpty)
-                Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: context.mc.card,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: context.mc.line),
-                  ),
-                  child: Column(
+              Expanded(
+                child: RefreshIndicator(
+                  color: context.mc.accent,
+                  onRefresh: () async {
+                    if (homeId == null) return;
+                    await context.read<TimelineCubit>().load(homeId);
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
                     children: [
-                      Text('📸', style: TextStyle(fontSize: 34)),
-                      SizedBox(height: 10),
-                      Text(context.l10n.emptyTitle,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                      SizedBox(height: 6),
-                      Text(
-                        context.l10n.emptyBody,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: context.mc.inkSoft, height: 1.45),
-                      ),
+                      Text('MAISON',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.2,
+                              color: context.mc.accentDeep)),
+                      const SizedBox(height: 4),
+                      Text(address,
+                          style: const TextStyle(
+                              fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.5)),
+                      if (profile != null) ...[
+                        const SizedBox(height: 4),
+                        Text(_profileSummary(context, profile),
+                            style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
+                      ],
+                      if (state.pending.isNotEmpty || completedPreview.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        _SectionLabel(context.l10n.sectionUpNext),
+                        const SizedBox(height: 2),
+                        for (final r in state.pending)
+                          _ReminderRow(
+                            reminder: r,
+                            due: _dueShort(context, r),
+                            urgent: r.daysLeft <= 14,
+                            onTap: () => showReminderActions(context, r, homeId),
+                          ),
+                        for (final r in completedPreview) _DoneRow(reminder: r),
+                      ],
+                      const SizedBox(height: 18),
+                      Container(height: 1, color: context.mc.line),
+                      const SizedBox(height: 6),
+                      if (state.records.isEmpty) ...[
+                        const SizedBox(height: 18),
+                        Text(context.l10n.emptyTitle,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 6),
+                        Text(context.l10n.emptyBody,
+                            style: TextStyle(
+                                fontSize: 13, color: context.mc.inkSoft, height: 1.45)),
+                      ] else
+                        for (final entry in groups.entries) ...[
+                          const SizedBox(height: 16),
+                          _SectionLabel(entry.key),
+                          const SizedBox(height: 4),
+                          for (final r in entry.value) _RecordRow(record: r),
+                        ],
                     ],
                   ),
-                )
-              else
-                ...state.records.map((r) => _RecordTile(record: r)),
+                ),
+              ),
+              _ComposeBar(),
             ],
-            ),
           ),
         );
       },
@@ -183,84 +150,17 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
   final String text;
   @override
   Widget build(BuildContext context) {
     return Text(text,
-        style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.8,
-            color: context.mc.accentDeep));
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.mc.inkSoft));
   }
 }
 
-class _HealthCard extends StatelessWidget {
-  const _HealthCard({required this.state});
-  final TimelineState state;
-
-  Widget _stat(BuildContext context, String value, String label) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(value,
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white)),
-          const SizedBox(height: 2),
-          Text(label,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.7))),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final next = state.pending.isEmpty ? null : state.pending.first;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-            colors: [MaisonColors.ink, MaisonColors.navy],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Text(context.l10n.homeHealth, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
-            const Spacer(),
-            Tag(context.l10n.onTrack, color: context.mc.greenWash, textColor: context.mc.green),
-          ]),
-          const SizedBox(height: 16),
-          Row(children: [
-            _stat(context, '${state.records.length}', context.l10n.itemsOnRecord),
-            _stat(context, '${state.activeWarranties}', context.l10n.activeWarranties),
-            _stat(
-              context,
-              next == null
-                  ? '—'
-                  : switch (next.daysLeft) {
-                      <= 0 => context.l10n.statToday,
-                      1 => context.l10n.statTomorrow,
-                      final d => context.l10n.statDays(d),
-                    },
-              next != null && next.daysLeft < 0
-                  ? context.l10n.taskOverdue
-                  : context.l10n.untilNextTask,
-            ),
-          ]),
-        ],
-      ),
-    );
-  }
-}
-
-void _showReminderActions(BuildContext context, Reminder reminder, String? homeId) {
+void showReminderActions(BuildContext context, Reminder reminder, String? homeId) {
   showModalBottomSheet(
     context: context,
     backgroundColor: context.mc.paper,
@@ -313,129 +213,188 @@ void _showReminderActions(BuildContext context, Reminder reminder, String? homeI
   );
 }
 
-class _ReminderCard extends StatelessWidget {
-  const _ReminderCard({required this.reminder, required this.onTap});
+class _ReminderRow extends StatelessWidget {
+  const _ReminderRow(
+      {required this.reminder, required this.due, required this.urgent, required this.onTap});
   final Reminder reminder;
+  final String due;
+  final bool urgent;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final urgent = reminder.daysLeft <= 14;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-      width: 210,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.mc.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.mc.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Tag(
-              switch (reminder.daysLeft) {
-                < -1 => context.l10n.overdueDays(-reminder.daysLeft),
-                -1 => context.l10n.dueYesterday,
-                0 => context.l10n.dueToday,
-                1 => context.l10n.dueTomorrow,
-                final d => context.l10n.inDays(d),
-              },
-              color: urgent ? context.mc.accentWash : context.mc.navyWash,
-              textColor: urgent ? context.mc.accentDeep : context.mc.navy,
-            ),
-            if (reminder.seasonal) ...[
-              const Spacer(),
-              const Text('❄️', style: TextStyle(fontSize: 14)),
-            ],
-          ]),
-          const Spacer(),
-          Text(reminder.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 3),
-          Text(reminder.detail,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: context.mc.inkSoft, height: 1.35)),
-        ],
-      ),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        height: 44,
+        child: Row(children: [
+          Icon(Icons.circle_outlined,
+              size: 17, color: urgent ? context.mc.accent : context.mc.line),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(reminder.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 15)),
+          ),
+          Text(due,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: urgent ? FontWeight.w600 : FontWeight.w400,
+                  color: urgent ? context.mc.accentDeep : context.mc.inkSoft)),
+        ]),
       ),
     );
   }
 }
 
-class _RecordTile extends StatelessWidget {
-  const _RecordTile({required this.record});
+class _DoneRow extends StatelessWidget {
+  const _DoneRow({required this.reminder});
+  final Reminder reminder;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: Row(children: [
+        Icon(Icons.check, size: 17, color: context.mc.green),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(reminder.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 15,
+                  color: context.mc.inkSoft,
+                  decoration: TextDecoration.lineThrough,
+                  decorationColor: context.mc.inkSoft)),
+        ),
+        Text(context.l10n.doneShort,
+            style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
+      ]),
+    );
+  }
+}
+
+class _RecordRow extends StatelessWidget {
+  const _RecordRow({required this.record});
   final HomeRecord record;
+
+  String _meta(BuildContext context) {
+    return [
+      record.room,
+      if (record.cost != null)
+        '\$${record.cost!.toStringAsFixed(record.cost! % 1 == 0 ? 0 : 2)}',
+      if (record.vendor != null) record.vendor!,
+      if (record.warrantyUntil != null)
+        '${context.l10n.labelWarranty.toLowerCase()} ${record.warrantyUntil!.year}',
+    ].join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => RecordDetailScreen(record: record))),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(record.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 3),
+              Text(_meta(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
+            ]),
+          ),
+          if (record.photoPath != null) ...[
+            const SizedBox(width: 12),
+            FutureBuilder<String?>(
+              future: Backend.instance.photoUrl(record.photoPath!),
+              builder: (context, snapshot) {
+                final url = snapshot.data;
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(9),
+                  child: SizedBox(
+                    width: 46,
+                    height: 46,
+                    child: url == null
+                        ? Container(color: context.mc.line)
+                        : Image.network(url, fit: BoxFit.cover,
+                            errorBuilder: (context, error, stack) =>
+                                Container(color: context.mc.line)),
+                  ),
+                );
+              },
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+/// Notes-style compose bar: tap anywhere to write; the camera goes straight
+/// to scanning.
+class _ComposeBar extends StatelessWidget {
+  void _openEntry(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => QuickNoteScreen()));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
-        color: context.mc.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.mc.line),
+        color: context.mc.paper,
+        border: Border(top: BorderSide(color: context.mc.line)),
       ),
-      child: ListTile(
-        onTap: () => Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => RecordDetailScreen(record: record))),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        leading: record.photoPath != null
-            ? FutureBuilder<String?>(
-                future: Backend.instance.photoUrl(record.photoPath!),
-                builder: (context, snapshot) {
-                  final url = snapshot.data;
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 46,
-                      height: 46,
-                      child: url == null
-                          ? Container(color: context.mc.paper)
-                          : Image.network(url, fit: BoxFit.cover,
-                              errorBuilder: (context, error, stack) =>
-                                  Container(color: context.mc.paper)),
-                    ),
-                  );
-                },
-              )
-            : Container(
-                width: 46,
-                height: 46,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: context.mc.paper,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(record.emoji, style: const TextStyle(fontSize: 22)),
-              ),
-        title: Text(record.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Tag(record.room),
-              if (record.cost != null)
-                Tag('\$${record.cost!.toStringAsFixed(record.cost! % 1 == 0 ? 0 : 2)}',
-                    color: context.mc.greenWash, textColor: context.mc.green),
-              if (record.warrantyUntil != null)
-                Tag('Warranty → ${record.warrantyUntil!.year}',
-                    color: context.mc.accentWash, textColor: context.mc.accentDeep),
-            ],
+      padding: const EdgeInsets.fromLTRB(20, 10, 16, 10),
+      child: SafeArea(
+        top: false,
+        child: Row(children: [
+          GestureDetector(
+            key: const Key('compose-camera'),
+            onTap: () => showCaptureSheet(context, CaptureMode.nameplate),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child:
+                  Icon(Icons.photo_camera_outlined, size: 24, color: context.mc.accentDeep),
+            ),
           ),
-        ),
-        trailing: Icon(Icons.chevron_right, color: context.mc.inkSoft),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              key: const Key('compose-field'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _openEntry(context),
+              child: SizedBox(
+                height: 44,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(context.l10n.composeHint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, color: context.mc.inkSoft)),
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => _openEntry(context),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: context.mc.accent),
+              child: const Icon(Icons.add, size: 22, color: Colors.white),
+            ),
+          ),
+        ]),
       ),
     );
   }

@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionYourPlace => 'YOUR PLACE';
 
   @override
-  String get sectionUpNext => 'UP NEXT';
+  String get sectionUpNext => 'Up next';
 
   @override
   String get sectionTimeline => 'HOUSE TIMELINE';
@@ -537,4 +537,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get appleUnavailable =>
       'Apple sign-in isn\'t enabled in this build yet — coming with the beta.';
+
+  @override
+  String get composeHint => 'Add anything — type it or snap it';
+
+  @override
+  String get fileIt => 'File it';
+
+  @override
+  String get newEntryTitle => 'New entry';
+
+  @override
+  String get doneShort => 'done';
+
+  @override
+  String get todayHeader => 'Today';
 }

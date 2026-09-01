@@ -26,87 +26,6 @@ Route<void> parsingRoute(CaptureMode mode, {String? noteText, Uint8List? imageBy
   );
 }
 
-/// Entry point: the "+ Add" bottom sheet with the three capture modes.
-void showAddSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: context.mc.paper,
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-    builder: (sheetContext) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.l10n.addSheetTitle,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(context.l10n.addSheetSubtitle,
-                style: TextStyle(fontSize: 14, color: context.mc.inkSoft)),
-            const SizedBox(height: 18),
-            _AddOption(
-              emoji: '📸',
-              title: context.l10n.optionNameplate,
-              subtitle: context.l10n.optionNameplateSub,
-              onTap: () => _startCapture(sheetContext, context, CaptureMode.nameplate),
-            ),
-            _AddOption(
-              emoji: '🧾',
-              title: context.l10n.optionReceipt,
-              subtitle: context.l10n.optionReceiptSub,
-              onTap: () => _startCapture(sheetContext, context, CaptureMode.receipt),
-            ),
-            _AddOption(
-              emoji: '⌨️',
-              title: context.l10n.optionNote,
-              subtitle: context.l10n.optionNoteSub,
-              onTap: () => _startCapture(sheetContext, context, CaptureMode.note),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-void _startCapture(BuildContext sheetContext, BuildContext parentContext, CaptureMode mode) {
-  Navigator.of(sheetContext).pop();
-  if (mode == CaptureMode.note) {
-    Navigator.of(parentContext).push(MaterialPageRoute(builder: (_) => QuickNoteScreen()));
-  } else {
-    showCaptureSheet(parentContext, mode);
-  }
-}
-
-class _AddOption extends StatelessWidget {
-  const _AddOption({required this.emoji, required this.title, required this.subtitle, required this.onTap});
-  final String emoji;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: context.mc.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.mc.line),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Text(emoji, style: const TextStyle(fontSize: 26)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
-        subtitle: Text(subtitle, style: TextStyle(fontSize: 12.5, color: context.mc.inkSoft)),
-        trailing: Icon(Icons.chevron_right, color: context.mc.inkSoft),
-      ),
-    );
-  }
-}
-
 /// Camera as a bottom sheet (ChatGPT-style): the live viewfinder slides up
 /// over the current screen as a rounded panel, controls overlaid inside it.
 /// Resolves with the captured bytes (null bytes = demo mode, proceed without).
@@ -373,7 +292,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
   }
 }
 
-/// Quick-note input, pre-filled with a realistic example.
+/// Notes-style "New entry": borderless writing surface, quiet scan chips.
 class QuickNoteScreen extends StatefulWidget {
   const QuickNoteScreen({super.key});
   @override
@@ -390,41 +309,84 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
     super.dispose();
   }
 
+  void _file() {
+    Navigator.of(context)
+        .pushReplacement(parsingRoute(CaptureMode.note, noteText: _controller.text));
+  }
+
+  Widget _scanChip(BuildContext context, IconData icon, String label, CaptureMode mode) {
+    return GestureDetector(
+      onTap: () async {
+        // Pop this screen first, then open the sheet from the navigator's own
+        // context — this screen's context is defunct once popped.
+        final nav = Navigator.of(context);
+        nav.pop();
+        await showCaptureSheet(nav.context, mode);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: BoxDecoration(
+          border: Border.all(color: context.mc.line),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 17, color: context.mc.navy),
+          const SizedBox(width: 8),
+          Text(label, style: TextStyle(fontSize: 14, color: context.mc.navy)),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.quickNoteTitle)),
+      appBar: AppBar(
+        toolbarHeight: 52,
+        automaticallyImplyLeading: false,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Text(context.l10n.cancelButton,
+                  style: TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w400, color: context.mc.inkSoft)),
+            ),
+            Text(context.l10n.newEntryTitle,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            GestureDetector(
+              onTap: _file,
+              child: Text(context.l10n.fileIt,
+                  style: TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w700, color: context.mc.accent)),
+            ),
+          ],
+        ),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.l10n.quickNoteHint,
-                style: TextStyle(fontSize: 15, color: context.mc.inkSoft)),
-            const SizedBox(height: 14),
             TextField(
               controller: _controller,
-              maxLines: 4,
+              maxLines: 5,
+              minLines: 1,
               autofocus: true,
-              style: const TextStyle(fontSize: 17, height: 1.45),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: context.mc.card,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: context.mc.line)),
-              ),
+              style: const TextStyle(fontSize: 19, height: 1.45, letterSpacing: -0.2),
+              decoration: const InputDecoration(border: InputBorder.none, isCollapsed: true),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.auto_awesome),
-                label: Text(context.l10n.quickNoteButton),
-                onPressed: () => Navigator.of(context)
-                    .pushReplacement(parsingRoute(CaptureMode.note, noteText: _controller.text)),
-              ),
-            ),
+            const SizedBox(height: 12),
+            Text(context.l10n.quickNoteHint,
+                style: TextStyle(fontSize: 13, color: context.mc.inkSoft, height: 1.5)),
+            const SizedBox(height: 24),
+            Wrap(spacing: 10, runSpacing: 10, children: [
+              _scanChip(context, Icons.photo_camera_outlined, context.l10n.optionNameplate,
+                  CaptureMode.nameplate),
+              _scanChip(context, Icons.receipt_long_outlined, context.l10n.optionReceipt,
+                  CaptureMode.receipt),
+            ]),
           ],
         ),
       ),
@@ -861,9 +823,9 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
             GestureDetector(
               onTap: () => openPhotoViewer(context, bytes: widget.photoBytes),
               child: Container(
-                margin: const EdgeInsets.only(bottom: 14),
+                margin: const EdgeInsets.only(bottom: 16),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   child: Image.memory(
                     widget.photoBytes!,
                     height: 170,
@@ -873,18 +835,17 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                 ),
               ),
             ),
-          if (r.rawInput != null)
-            Container(
-              padding: const EdgeInsets.all(14),
-              margin: const EdgeInsets.only(bottom: 14),
-              decoration: BoxDecoration(
-                color: context.mc.accentWash,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(context.l10n.youGaveMe(r.rawInput!),
-                  style: TextStyle(
-                      fontSize: 13, fontStyle: FontStyle.italic, color: context.mc.accentDeep, height: 1.4)),
-            ),
+          if (r.rawInput != null) ...[
+            Text(context.l10n.youGaveMe(r.rawInput!),
+                style: TextStyle(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: context.mc.inkSoft,
+                    height: 1.45)),
+            const SizedBox(height: 16),
+            Container(height: 1, color: context.mc.line),
+            const SizedBox(height: 16),
+          ],
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -930,55 +891,55 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
             ),
           ),
           if (result.reminders.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: context.mc.navyWash,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(context.l10n.remindersBox,
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: context.mc.navy)),
-                  const SizedBox(height: 6),
-                  ...result.reminders.map((rem) => Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text('•  ${rem.title} — ${_fmtDate(rem.due)}',
-                            style: TextStyle(fontSize: 13.5, color: context.mc.navy, height: 1.4)),
-                      )),
-                ],
-              ),
-            ),
+            const SizedBox(height: 18),
+            ...result.reminders.map((rem) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(children: [
+                    Icon(Icons.notifications_none, size: 17, color: context.mc.inkSoft),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Text(rem.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 14, color: context.mc.navy))),
+                    Text(_fmtDate(rem.due),
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: context.mc.accentDeep)),
+                  ]),
+                )),
           ],
-          const SizedBox(height: 14),
-          Container(
-            decoration: BoxDecoration(
-              color: context.mc.card,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: context.mc.line),
-            ),
-            child: ListTile(
-              onTap: _pickRemindDate,
-              leading: const Text('🗓️', style: TextStyle(fontSize: 22)),
-              title: Text(
-                _remindOn == null ? context.l10n.remindMeCard : context.l10n.reminderOnDate(_fmtDate(_remindOn!)),
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-              ),
-              subtitle: Text(
-                _remindOn == null
-                    ? context.l10n.remindOptional
-                    : context.l10n.willAppearUpNext,
-                style: TextStyle(fontSize: 12.5, color: context.mc.inkSoft),
-              ),
-              trailing: _remindOn == null
-                  ? Icon(Icons.add, color: context.mc.accentDeep)
-                  : IconButton(
-                      icon: Icon(Icons.close, size: 20, color: context.mc.inkSoft),
-                      tooltip: context.l10n.removeReminder,
-                      onPressed: () => setState(() => _remindOn = null),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: _pickRemindDate,
+            child: SizedBox(
+              height: 46,
+              child: Row(children: [
+                Icon(Icons.calendar_today_outlined, size: 17, color: context.mc.inkSoft),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _remindOn == null
+                        ? context.l10n.remindMeCard
+                        : context.l10n.reminderOnDate(_fmtDate(_remindOn!)),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _remindOn == null ? context.mc.navy : context.mc.accentDeep),
+                  ),
+                ),
+                if (_remindOn == null)
+                  Icon(Icons.add, size: 18, color: context.mc.inkSoft)
+                else
+                  GestureDetector(
+                    onTap: () => setState(() => _remindOn = null),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(Icons.close, size: 18, color: context.mc.inkSoft),
                     ),
+                  ),
+              ]),
             ),
           ),
           const SizedBox(height: 20),
@@ -995,15 +956,14 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
             onPressed: saving ? null : _save,
           ),
           const SizedBox(height: 10),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
+          TextButton.icon(
+            style: TextButton.styleFrom(
               foregroundColor: _editing ? context.mc.inkSoft : context.mc.accentDeep,
-              side: BorderSide(color: _editing ? context.mc.line : context.mc.accent),
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              padding: const EdgeInsets.symmetric(vertical: 13),
             ),
-            icon: Icon(_editing ? Icons.undo : Icons.edit_outlined, size: 19),
-            label: Text(_editing ? context.l10n.keepAiVersion : context.l10n.fixFirst),
+            icon: Icon(_editing ? Icons.undo : Icons.edit_outlined, size: 18),
+            label: Text(_editing ? context.l10n.keepAiVersion : context.l10n.fixFirst,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             onPressed: () => setState(() {
               if (_editing) {
                 // Revert any edits back to what the AI extracted.

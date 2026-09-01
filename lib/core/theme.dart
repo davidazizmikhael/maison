@@ -51,36 +51,37 @@ class MaisonPalette extends ThemeExtension<MaisonPalette> {
   final Color navyWash;
   final Color greenWash;
 
+  // Notes-style palette: warm paper, warm grays, hairlines, one accent.
   static const light = MaisonPalette(
-    paper: MaisonColors.paper,
-    card: MaisonColors.card,
-    ink: MaisonColors.ink,
-    inkSoft: MaisonColors.inkSoft,
-    line: MaisonColors.line,
-    accent: MaisonColors.accent,
-    accentDeep: MaisonColors.accentDeep,
-    navy: MaisonColors.navy,
-    green: MaisonColors.green,
-    red: MaisonColors.red,
-    accentWash: MaisonColors.accentWash,
-    navyWash: MaisonColors.navyWash,
-    greenWash: MaisonColors.greenWash,
+    paper: Color(0xFFFBFAF6),
+    card: Color(0xFFFFFFFF),
+    ink: Color(0xFF1B2432),
+    inkSoft: Color(0xFF8A8577),
+    line: Color(0xFFE9E4D8),
+    accent: Color(0xFFD97742),
+    accentDeep: Color(0xFFB85C2E),
+    navy: Color(0xFF5A6472),
+    green: Color(0xFF7A9D84),
+    red: Color(0xFFB0492F),
+    accentWash: Color(0xFFF6EADF),
+    navyWash: Color(0xFFEFECE4),
+    greenWash: Color(0xFFE9F0EA),
   );
 
   static const dark = MaisonPalette(
-    paper: Color(0xFF15181F),
-    card: Color(0xFF1F242E),
+    paper: Color(0xFF1B1A17),
+    card: Color(0xFF242320),
     ink: Color(0xFFEFEAE2),
-    inkSoft: Color(0xFF9AA3B2),
-    line: Color(0xFF313845),
+    inkSoft: Color(0xFFA29B8C),
+    line: Color(0xFF37342E),
     accent: Color(0xFFE2854F),
     accentDeep: Color(0xFFF0A379),
-    navy: Color(0xFF9DB8DC),
-    green: Color(0xFF7FBF9E),
+    navy: Color(0xFFA9B2BE),
+    green: Color(0xFF8FBF9E),
     red: Color(0xFFE07B62),
-    accentWash: Color(0xFF3B2A1F),
-    navyWash: Color(0xFF263141),
-    greenWash: Color(0xFF1F3329),
+    accentWash: Color(0xFF3B2E22),
+    navyWash: Color(0xFF2C2A25),
+    greenWash: Color(0xFF253029),
   );
 
   @override

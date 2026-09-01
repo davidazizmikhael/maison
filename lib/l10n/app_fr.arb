@@ -1,7 +1,7 @@
 {
   "@@locale": "fr",
   "sectionYourPlace": "CHEZ VOUS",
-  "sectionUpNext": "À VENIR",
+  "sectionUpNext": "À venir",
   "sectionTimeline": "HISTORIQUE DE LA MAISON",
   "homeHealth": "Santé de la maison",
   "onTrack": "EN ORDRE",
@@ -156,5 +156,10 @@
   "accountLinkedTitle": "Protégé avec Apple",
   "accountLinkedBody": "Votre carnet est lié à votre identifiant Apple et peut être restauré sur n'importe quel appareil.",
   "linkedSnack": "Compte protégé ✓",
-  "appleUnavailable": "La connexion Apple n'est pas encore activée dans cette version — bientôt avec la bêta."
+  "appleUnavailable": "La connexion Apple n'est pas encore activée dans cette version — bientôt avec la bêta.",
+  "composeHint": "Ajoutez n'importe quoi — écrivez ou photographiez",
+  "fileIt": "Classer",
+  "newEntryTitle": "Nouvelle entrée",
+  "doneShort": "fait",
+  "todayHeader": "Aujourd'hui"
 }

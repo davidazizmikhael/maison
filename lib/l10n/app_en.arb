@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
   "sectionYourPlace": "YOUR PLACE",
-  "sectionUpNext": "UP NEXT",
+  "sectionUpNext": "Up next",
   "sectionTimeline": "HOUSE TIMELINE",
   "homeHealth": "Home health",
   "onTrack": "ON TRACK",
@@ -282,5 +282,10 @@
   "accountLinkedTitle": "Protected with Apple",
   "accountLinkedBody": "Your logbook is tied to your Apple ID and can be restored on any device.",
   "linkedSnack": "Account protected ✓",
-  "appleUnavailable": "Apple sign-in isn't enabled in this build yet — coming with the beta."
+  "appleUnavailable": "Apple sign-in isn't enabled in this build yet — coming with the beta.",
+  "composeHint": "Add anything — type it or snap it",
+  "fileIt": "File it",
+  "newEntryTitle": "New entry",
+  "doneShort": "done",
+  "todayHeader": "Today"
 }

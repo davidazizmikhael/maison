@@ -12,7 +12,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sectionYourPlace => 'CHEZ VOUS';
 
   @override
-  String get sectionUpNext => 'À VENIR';
+  String get sectionUpNext => 'À venir';
 
   @override
   String get sectionTimeline => 'HISTORIQUE DE LA MAISON';
@@ -538,4 +538,20 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get appleUnavailable =>
       'La connexion Apple n\'est pas encore activée dans cette version — bientôt avec la bêta.';
+
+  @override
+  String get composeHint =>
+      'Ajoutez n\'importe quoi — écrivez ou photographiez';
+
+  @override
+  String get fileIt => 'Classer';
+
+  @override
+  String get newEntryTitle => 'Nouvelle entrée';
+
+  @override
+  String get doneShort => 'fait';
+
+  @override
+  String get todayHeader => 'Aujourd\'hui';
 }

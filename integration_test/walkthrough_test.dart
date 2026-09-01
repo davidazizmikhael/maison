@@ -55,16 +55,16 @@ void main() {
     await shot(tester, '03c-onboarding-how-it-works');
     await tester.tap(find.text('Start my home profile'));
     await tester.pumpAndSettle();
-    // Live mode creates the home over the network — wait for the dashboard.
-    await waitFor(tester, find.text('Add'));
+    // Live mode creates the home over the network — wait for the journal.
+    await waitFor(tester, find.byKey(const Key('compose-field')));
 
     // 2 — Home dashboard
     await shot(tester, '04-home-dashboard');
 
-    // 3 — Add: scan a nameplate
-    await tester.tap(find.text('Add'));
+    // 3 — Add: compose bar → New entry → scan a nameplate
+    await tester.tap(find.byKey(const Key('compose-field')));
     await tester.pumpAndSettle();
-    await shot(tester, '05-add-sheet');
+    await shot(tester, '05-new-entry');
     await tester.tap(find.text('Scan a nameplate'));
     await tester.pumpAndSettle();
     await shot(tester, '06-camera-nameplate');
@@ -91,7 +91,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save my corrections'));
     await tester.pumpAndSettle();
-    // Saving hits the database in live mode — wait for the timeline to return.
+    // Saving hits the database in live mode — wait for the journal to return.
     await waitFor(tester, find.text('Furnace — Lennox ML296V'));
     await shot(tester, '09-home-after-save');
 
@@ -119,20 +119,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save my corrections'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.text('Add')); // back on the timeline
+    await waitFor(tester, find.byKey(const Key('compose-field'))); // back on the journal
 
-    // 6 — Quick note flow
-    await tester.tap(find.text('Add'));
+    // 6 — Quick note flow (the compose bar IS the entry point now).
+    // The floating "saved" snackbar sits over the compose bar — let it expire.
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Quick note'));
+    await tester.tap(find.byKey(const Key('compose-field')));
     await tester.pumpAndSettle();
     await shot(tester, '11-quick-note');
-    await tester.tap(find.text('Let Maison file it'));
+    await tester.tap(find.text('File it'));
     await waitFor(tester, find.text("Here's what I got"));
     await shot(tester, '12-confirm-note-record');
     await tester.tap(find.text('Looks right — save it'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.text('Add'));
+    await waitFor(tester, find.byKey(const Key('compose-field')));
 
     // 6b — Delete the note record from its detail screen
     await tester.tap(find.text('Bathroom faucet repair'));
@@ -143,18 +144,17 @@ void main() {
     await shot(tester, '12b-delete-confirm');
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.text('Add'));
+    await waitFor(tester, find.byKey(const Key('compose-field')));
     expect(find.text('Bathroom faucet repair'), findsNothing);
 
-    // 6c — Complete a reminder from the Up next rail (first card: the rail is
-    // horizontal and lazy, so off-screen cards aren't built)
+    // 6c — Complete a reminder from the Up next checklist
     await tester.tap(find.text('Furnace filter due'));
     await tester.pumpAndSettle();
     await shot(tester, '12c-reminder-actions');
     await tester.tap(find.text('Mark as done'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.text('COMPLETED'));
-    expect(find.text('Furnace filter due'), findsOneWidget); // now a completed chip
+    await waitFor(tester, find.text('done')); // struck-through row keeps it visible
+    expect(find.text('Furnace filter due'), findsOneWidget);
 
     // 7 — Exports
     await tester.tap(find.byIcon(Icons.ios_share));
@@ -181,14 +181,14 @@ void main() {
     await shot(tester, '15-language-sheet');
     await tester.tap(find.text('Français'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.text('HISTORIQUE DE LA MAISON'));
-    expect(find.text('À VENIR'), findsOneWidget);
+    await waitFor(tester, find.text("Ajoutez n'importe quoi — écrivez ou photographiez"));
+    expect(find.text('À venir'), findsOneWidget);
     await shot(tester, '16-home-french');
     await tester.tap(find.byIcon(Icons.language));
     await tester.pumpAndSettle();
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.text('HOUSE TIMELINE'));
+    await waitFor(tester, find.text('Add anything — type it or snap it'));
 
     // 10 — Theme: simulate the device flipping to dark, verify the palette follows
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;

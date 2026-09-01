@@ -80,24 +80,36 @@ class RecordDetailScreen extends StatelessWidget {
         .showSnackBar(SnackBar(content: Text(snack), duration: const Duration(seconds: 2)));
   }
 
-  Widget _actionTile(BuildContext context, String emoji, String title, String subtitle,
-      {required VoidCallback onTap}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: context.mc.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.mc.line),
-      ),
-      child: ListTile(
-        leading: Text(emoji, style: const TextStyle(fontSize: 22)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-        subtitle: Text(subtitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12.5, color: context.mc.inkSoft)),
-        trailing: Icon(Icons.chevron_right, color: context.mc.inkSoft),
-        onTap: onTap,
+  Widget _kv(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+            width: 82,
+            child: Text(label, style: TextStyle(fontSize: 13, color: context.mc.inkSoft))),
+        Expanded(child: Text(value, style: const TextStyle(fontSize: 15))),
+      ]),
+    );
+  }
+
+  Widget _actionRow(BuildContext context, String title,
+      {String? trailingText, Color? color, VoidCallback? onTap, bool chevron = false}) {
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        height: 46,
+        child: Row(children: [
+          Expanded(
+            child: Text(title,
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: onTap != null ? FontWeight.w600 : FontWeight.w400,
+                    color: color ?? context.mc.ink)),
+          ),
+          if (trailingText != null)
+            Text(trailingText, style: TextStyle(fontSize: 12, color: context.mc.inkSoft)),
+          if (chevron) Icon(Icons.chevron_right, size: 18, color: context.mc.accentDeep),
+        ]),
       ),
     );
   }
@@ -130,114 +142,67 @@ class RecordDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                  colors: [MaisonColors.ink, MaisonColors.navy],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(record.emoji, style: const TextStyle(fontSize: 34)),
-                const SizedBox(height: 10),
-                Text(record.title,
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text(record.subtitle,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14.5)),
-                const SizedBox(height: 14),
-                Wrap(spacing: 8, runSpacing: 6, children: [
-                  Tag(record.room, color: Colors.white24, textColor: Colors.white),
-                  if (record.cost != null)
-                    Tag('\$${record.cost!.toStringAsFixed(2)}', color: Colors.white24, textColor: Colors.white),
-                  if (record.vendor != null)
-                    Tag(record.vendor!, color: Colors.white24, textColor: Colors.white),
-                ]),
-              ],
-            ),
-          ),
+          Text(record.title,
+              style: const TextStyle(
+                  fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.4, height: 1.2)),
+          const SizedBox(height: 4),
+          Text(record.subtitle, style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
+          _kv(context, context.l10n.labelRoom, record.room),
+          if (record.cost != null)
+            _kv(context, context.l10n.labelCost, '\$${record.cost!.toStringAsFixed(2)}'),
+          if (record.vendor != null) _kv(context, context.l10n.labelVendor, record.vendor!),
+          if (record.modelSerial != null)
+            _kv(context, context.l10n.labelSerial, record.modelSerial!),
           if (record.photoPath != null) ...[
             const SizedBox(height: 16),
             _RecordPhoto(photoPath: record.photoPath!),
           ],
           if (warrantyDaysLeft != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: context.mc.card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: context.mc.line),
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(
+                child: Text(
+                    '${context.l10n.labelWarranty} — ${context.l10n.warrantyUntil('${w!.year}')}',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    const Text('🛡️ Warranty', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800)),
-                    const Spacer(),
-                    Tag('$warrantyDaysLeft DAYS LEFT',
-                        color: warrantyDaysLeft < 30
-                            ? context.mc.accentWash
-                            : context.mc.greenWash,
-                        textColor:
-                            warrantyDaysLeft < 30 ? context.mc.accentDeep : context.mc.green),
-                  ]),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: warrantyFraction,
-                      minHeight: 9,
-                      backgroundColor: context.mc.paper,
-                      color: warrantyDaysLeft < 30 ? context.mc.accent : context.mc.green,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Covered until ${w!.year}. If it breaks, Maison assembles the claim pack — receipt, serial, and terms — in one tap.',
-                    style: TextStyle(fontSize: 13, color: context.mc.inkSoft, height: 1.45),
-                  ),
-                ],
+              Text(context.l10n.statDays(warrantyDaysLeft),
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: warrantyDaysLeft < 30 ? FontWeight.w600 : FontWeight.w400,
+                      color: warrantyDaysLeft < 30
+                          ? context.mc.accentDeep
+                          : context.mc.inkSoft)),
+            ]),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: warrantyFraction,
+                minHeight: 3,
+                backgroundColor: context.mc.line,
+                color: warrantyDaysLeft < 30 ? context.mc.accent : context.mc.accentDeep,
               ),
             ),
           ],
           if (record.rawInput != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: context.mc.accentWash,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('ORIGINAL INPUT',
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                          color: context.mc.accentDeep)),
-                  const SizedBox(height: 6),
-                  Text(record.rawInput!,
-                      style: TextStyle(
-                          fontSize: 13.5,
-                          fontStyle: FontStyle.italic,
-                          color: context.mc.accentDeep,
-                          height: 1.4)),
-                ],
-              ),
-            ),
+            const SizedBox(height: 20),
+            Text(context.l10n.youGaveMe(record.rawInput!),
+                style: TextStyle(
+                    fontSize: 13.5,
+                    fontStyle: FontStyle.italic,
+                    color: context.mc.inkSoft,
+                    height: 1.45)),
           ],
-          const SizedBox(height: 16),
-          _actionTile(context, '📄', context.l10n.claimPackTitle, context.l10n.claimPackBody,
+          const SizedBox(height: 20),
+          Container(height: 1, color: context.mc.line),
+          const SizedBox(height: 6),
+          _actionRow(context, context.l10n.claimPackTitle,
+              color: context.mc.accentDeep,
+              chevron: true,
               onTap: () => shareClaimPack(context, record)),
-          _actionTile(context, '📖', 'View manual',
-              record.manualFound ? 'PDF attached' : context.l10n.comingSoon,
+          _actionRow(context, 'View manual',
+              trailingText: record.manualFound ? 'PDF' : context.l10n.comingSoon,
+              color: context.mc.inkSoft,
               onTap: () => ScaffoldMessenger.of(context)
                   .showSnackBar(SnackBar(content: Text(context.l10n.comingSoon)))),
         ],
