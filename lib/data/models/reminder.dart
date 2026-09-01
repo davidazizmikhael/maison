@@ -1,5 +1,11 @@
 class Reminder {
-  Reminder({this.id, required this.title, required this.detail, required this.due, this.seasonal = false});
+  Reminder(
+      {this.id,
+      required this.title,
+      required this.detail,
+      required this.due,
+      this.seasonal = false,
+      this.doneAt});
 
   /// Database row id (null in demo mode).
   final String? id;
@@ -7,6 +13,11 @@ class Reminder {
   final String detail;
   final DateTime due;
   final bool seasonal;
+
+  /// When the user marked it done (null = still pending).
+  final DateTime? doneAt;
+
+  bool get isDone => doneAt != null;
 
   /// Whole calendar days until due (0 = today, negative = overdue),
   /// computed date-to-date so time of day never skews it.
@@ -17,8 +28,13 @@ class Reminder {
         .inDays;
   }
 
-  Reminder copyWith({DateTime? due}) =>
-      Reminder(id: id, title: title, detail: detail, due: due ?? this.due, seasonal: seasonal);
+  Reminder copyWith({DateTime? due, DateTime? doneAt}) => Reminder(
+      id: id,
+      title: title,
+      detail: detail,
+      due: due ?? this.due,
+      seasonal: seasonal,
+      doneAt: doneAt ?? this.doneAt);
 
   String get dueLabel => switch (daysLeft) {
         < -1 => 'OVERDUE ${-daysLeft} DAYS',

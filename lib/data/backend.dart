@@ -291,12 +291,8 @@ class SupabaseBackend implements Backend {
         .select()
         .eq('home_id', homeId)
         .order('created_at', ascending: false);
-    final reminderRows = await _db
-        .from('reminders')
-        .select()
-        .eq('home_id', homeId)
-        .isFilter('done_at', null)
-        .order('due_on');
+    final reminderRows =
+        await _db.from('reminders').select().eq('home_id', homeId).order('due_on');
     final records = [
       for (final r in recordRows)
         HomeRecord(
@@ -324,6 +320,7 @@ class SupabaseBackend implements Backend {
           detail: (r['detail'] as String?) ?? '',
           due: _date(r['due_on'])!,
           seasonal: (r['seasonal'] as bool?) ?? false,
+          doneAt: r['done_at'] == null ? null : DateTime.tryParse(r['done_at'] as String),
         ),
     ];
     return (records, reminders);

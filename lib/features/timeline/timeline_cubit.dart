@@ -10,6 +10,16 @@ class TimelineState {
   final List<Reminder> reminders;
   final bool refreshing;
 
+  /// Reminders still waiting, soonest first.
+  List<Reminder> get pending => [for (final r in reminders) if (!r.isDone) r];
+
+  /// Completed reminders — the maintenance log, newest first.
+  List<Reminder> get completed {
+    final done = [for (final r in reminders) if (r.isDone) r];
+    done.sort((a, b) => b.doneAt!.compareTo(a.doneAt!));
+    return done;
+  }
+
   int get activeWarranties => records
       .where((r) => r.warrantyUntil != null && r.warrantyUntil!.isAfter(DateTime.now()))
       .length;
@@ -31,8 +41,9 @@ class TimelineCubit extends Cubit<TimelineState> {
 
   void _emitSynced(List<HomeRecord> records, List<Reminder> reminders, {bool refreshing = false}) {
     final sorted = [...reminders]..sort((a, b) => a.due.compareTo(b.due));
-    emit(TimelineState(records: records, reminders: sorted, refreshing: refreshing));
-    NotificationService.sync(sorted);
+    final next = TimelineState(records: records, reminders: sorted, refreshing: refreshing);
+    emit(next);
+    NotificationService.sync(next.pending);
   }
 
   Future<void> load(String homeId) async {
@@ -64,7 +75,10 @@ class TimelineCubit extends Cubit<TimelineState> {
       await _backend.completeReminder(reminder.id!);
       if (homeId != null) await load(homeId);
     } else {
-      _emitSynced(state.records, state.reminders.where((r) => !identical(r, reminder)).toList());
+      _emitSynced(state.records, [
+        for (final r in state.reminders)
+          identical(r, reminder) ? reminder.copyWith(doneAt: DateTime.now()) : r,
+      ]);
     }
   }
 

@@ -78,6 +78,17 @@ void main() {
     await tester.tap(find.text('Fix something first'));
     await tester.pumpAndSettle();
     await shot(tester, '08b-fix-details-editing');
+    // Room is picked from the home profile's rooms
+    await tester.tap(find.byKey(const Key('room-edit')));
+    await tester.pumpAndSettle();
+    await shot(tester, '08c-room-picker');
+    await tester.tap(find.text('Garage').last);
+    await tester.pumpAndSettle();
+    // Warranty date is edited via the date picker
+    await tester.tap(find.byKey(const Key('warranty-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save my corrections'));
     await tester.pumpAndSettle();
     // Saving hits the database in live mode — wait for the timeline to return.
@@ -125,7 +136,8 @@ void main() {
     await shot(tester, '12c-reminder-actions');
     await tester.tap(find.text('Mark as done'));
     await tester.pumpAndSettle();
-    expect(find.text('Furnace filter due'), findsNothing);
+    await waitFor(tester, find.text('COMPLETED'));
+    expect(find.text('Furnace filter due'), findsOneWidget); // now a completed chip
 
     // 7 — Exports
     await tester.tap(find.byIcon(Icons.ios_share));

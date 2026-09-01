@@ -490,4 +490,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String reminderSnoozedSnack(String date) {
     return 'Snoozed to $date';
   }
+
+  @override
+  String get sectionCompleted => 'COMPLETED';
+
+  @override
+  String get pdfMaintenanceLog => 'Maintenance log';
+
+  @override
+  String pdfDoneOn(String date) {
+    return 'Done $date';
+  }
+
+  @override
+  String get tapToSet => 'Tap to set';
 }

@@ -88,7 +88,7 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ],
-              if (state.reminders.isNotEmpty) ...[
+              if (state.pending.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 _SectionTitle(context.l10n.sectionUpNext),
                 const SizedBox(height: 10),
@@ -96,14 +96,42 @@ class HomeScreen extends StatelessWidget {
                   height: 118,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: state.reminders.length,
+                    itemCount: state.pending.length,
                     clipBehavior: Clip.none,
                     separatorBuilder: (context, index) => const SizedBox(width: 12),
                     itemBuilder: (_, i) => _ReminderCard(
-                        reminder: state.reminders[i],
+                        reminder: state.pending[i],
                         onTap: () =>
-                            _showReminderActions(context, state.reminders[i], homeId)),
+                            _showReminderActions(context, state.pending[i], homeId)),
                   ),
+                ),
+              ],
+              if (state.completed.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                _SectionTitle(context.l10n.sectionCompleted),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final r in state.completed)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: context.mc.greenWash,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.check, size: 14, color: context.mc.green),
+                          const SizedBox(width: 5),
+                          Text(r.title,
+                              style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.mc.green)),
+                        ]),
+                      ),
+                  ],
                 ),
               ],
               const SizedBox(height: 24),
@@ -179,7 +207,7 @@ class _HealthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final next = state.reminders.isEmpty ? null : state.reminders.first;
+    final next = state.pending.isEmpty ? null : state.pending.first;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(

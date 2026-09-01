@@ -955,6 +955,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Snoozed to {date}'**
   String reminderSnoozedSnack(String date);
+
+  /// No description provided for @sectionCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'COMPLETED'**
+  String get sectionCompleted;
+
+  /// No description provided for @pdfMaintenanceLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance log'**
+  String get pdfMaintenanceLog;
+
+  /// No description provided for @pdfDoneOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Done {date}'**
+  String pdfDoneOn(String date);
+
+  /// No description provided for @tapToSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to set'**
+  String get tapToSet;
 }
 
 class _AppLocalizationsDelegate

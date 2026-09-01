@@ -165,6 +165,7 @@ Future<Uint8List> buildHouseHistory({
   required AppLocalizations l10n,
   required String address,
   required List<HomeRecord> records,
+  List<Reminder> completed = const [],
 }) async {
   final sorted = [...records]..sort((a, b) => b.addedOn.compareTo(a.addedOn));
   final doc = pw.Document(theme: await _pdfTheme());
@@ -201,6 +202,22 @@ Future<Uint8List> buildHouseHistory({
             ),
           ]),
         ),
+      if (completed.isNotEmpty) ...[
+        pw.SizedBox(height: 8),
+        pw.Text(l10n.pdfMaintenanceLog,
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: _ink)),
+        pw.SizedBox(height: 6),
+        for (final r in completed)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            child: pw.Row(children: [
+              pw.Expanded(
+                  child: pw.Text(r.title, style: const pw.TextStyle(fontSize: 10.5, color: _ink))),
+              pw.Text(l10n.pdfDoneOn(_fmtDate(r.doneAt!)),
+                  style: const pw.TextStyle(fontSize: 9.5, color: _inkSoft)),
+            ]),
+          ),
+      ],
     ],
   ));
   return doc.save();

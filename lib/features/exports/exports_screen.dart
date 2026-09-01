@@ -155,9 +155,14 @@ class _ExportsScreenState extends State<ExportsScreen> {
 
   Future<void> _history() async {
     if (_guardEmpty()) return;
+    final l10n = context.l10n;
+    final address = _address;
+    final records = _records;
+    final completed = context.read<TimelineCubit>().state.completed;
     await _generate('history', () async {
-      return buildHouseHistory(l10n: context.l10n, address: _address, records: _records);
-    }, what: context.l10n.historyTitle, filename: 'maison-house-history.pdf');
+      return buildHouseHistory(
+          l10n: l10n, address: address, records: records, completed: completed);
+    }, what: l10n.historyTitle, filename: 'maison-house-history.pdf');
   }
 
   @override

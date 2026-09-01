@@ -142,5 +142,9 @@
   "markDone": "Marquer comme faite",
   "snoozeWeek": "Reporter d'une semaine",
   "reminderDoneSnack": "Rappel terminé ✓",
-  "reminderSnoozedSnack": "Reporté au {date}"
+  "reminderSnoozedSnack": "Reporté au {date}",
+  "sectionCompleted": "TERMINÉS",
+  "pdfMaintenanceLog": "Journal d'entretien",
+  "pdfDoneOn": "Fait le {date}",
+  "tapToSet": "Toucher pour définir"
 }

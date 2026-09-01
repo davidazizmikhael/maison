@@ -614,7 +614,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       cost: double.tryParse(_cost.text.replaceAll(',', '').replaceAll('\$', '')) ?? r.cost,
       vendor: _vendor.text.trim().isEmpty ? r.vendor : _vendor.text.trim(),
       modelSerial: r.modelSerial,
-      warrantyUntil: r.warrantyUntil,
+      warrantyUntil: _warrantyUntil,
       returnBy: r.returnBy,
       manualFound: r.manualFound,
       rawInput: r.rawInput,
@@ -624,6 +624,107 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
 
   /// Optional user-chosen follow-up date, saved as an extra reminder.
   DateTime? _remindOn;
+
+  /// Editable warranty end date (starts as the AI's extraction).
+  late DateTime? _warrantyUntil = result.record.warrantyUntil;
+
+  Future<void> _pickWarrantyDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _warrantyUntil ?? now.add(const Duration(days: 365)),
+      firstDate: DateTime(now.year - 15),
+      lastDate: DateTime(now.year + 30),
+      helpText: context.l10n.labelWarranty,
+    );
+    if (picked != null) setState(() => _warrantyUntil = picked);
+  }
+
+  Future<void> _pickRoom() async {
+    final session = context.read<SessionCubit>().state;
+    final profile = session is SessionReady ? session.profile : null;
+    final rooms = <String>{
+      if (_room.text.trim().isNotEmpty) _room.text.trim(),
+      ...?profile?.rooms,
+      'Kitchen', 'Living room', 'Bathroom', 'Bedroom', 'Basement', 'Garage', 'Home',
+    }.toList();
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: context.mc.paper,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Text(sheetContext.l10n.labelRoom,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final room in rooms)
+                    ListTile(
+                      dense: true,
+                      title: Text(room,
+                          style: TextStyle(
+                              fontWeight: room == _room.text
+                                  ? FontWeight.w800
+                                  : FontWeight.w500)),
+                      trailing: room == _room.text
+                          ? Icon(Icons.check, color: sheetContext.mc.accentDeep)
+                          : null,
+                      onTap: () => Navigator.of(sheetContext).pop(room),
+                    ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null) setState(() => _room.text = chosen);
+  }
+
+  /// A tappable value row used in edit mode for picker-driven fields.
+  Widget _pickRow(BuildContext context, String label, String value,
+      {required VoidCallback onTap, Key? key}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        SizedBox(
+            width: 105,
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: context.mc.inkSoft))),
+        Expanded(
+          child: GestureDetector(
+            key: key,
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+              decoration: BoxDecoration(
+                color: context.mc.paper,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: context.mc.line),
+              ),
+              child: Row(children: [
+                Expanded(
+                    child: Text(value,
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600))),
+                Icon(Icons.expand_more, size: 18, color: context.mc.inkSoft),
+              ]),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
 
   Future<void> _pickRemindDate() async {
     final now = DateTime.now();
@@ -801,9 +902,16 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                 Divider(height: 26, color: context.mc.line),
                 if (_editing) ...[
                   _editRow(context, context.l10n.labelName, _title),
-                  _editRow(context, context.l10n.labelRoom, _room),
+                  _pickRow(context, context.l10n.labelRoom, _room.text,
+                      key: const Key('room-edit'), onTap: _pickRoom),
                   _editRow(context, context.l10n.labelCost, _cost, keyboard: const TextInputType.numberWithOptions(decimal: true)),
                   _editRow(context, context.l10n.labelVendor, _vendor),
+                  _pickRow(
+                      context,
+                      context.l10n.labelWarranty,
+                      _warrantyUntil != null ? _fmtDate(_warrantyUntil!) : context.l10n.tapToSet,
+                      key: const Key('warranty-edit'),
+                      onTap: _pickWarrantyDate),
                 ] else ...[
                   _row(context, context.l10n.labelWhat, r.subtitle),
                   _row(context, context.l10n.labelRoom, r.room),
@@ -811,7 +919,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                   if (r.vendor != null) _row(context, context.l10n.labelVendor, r.vendor!),
                 ],
                 if (r.modelSerial != null) _row(context, context.l10n.labelSerial, r.modelSerial!),
-                if (r.warrantyUntil != null)
+                if (!_editing && r.warrantyUntil != null)
                   _row(context, context.l10n.labelWarranty, context.l10n.warrantyUntil(_fmtDate(r.warrantyUntil!))),
                 if (r.returnBy != null) _row(context, context.l10n.labelReturnBy, _fmtDate(r.returnBy!)),
                 if (r.manualFound) _row(context, context.l10n.labelManual, context.l10n.manualFound),
@@ -900,6 +1008,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                 _room.text = result.record.room;
                 _cost.text = result.record.cost?.toStringAsFixed(2) ?? '';
                 _vendor.text = result.record.vendor ?? '';
+                _warrantyUntil = result.record.warrantyUntil;
               }
               _editing = !_editing;
             }),
