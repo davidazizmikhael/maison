@@ -18,8 +18,9 @@ void main() {
 
     expect(progress, isNotNull);
     expect(progress!.daysLeft, 180);
-    expect(progress.totalDays, 545);
-    expect(progress.progress, closeTo(0.330, 0.01));
+    // Fixed 3-year horizon: different runways render visibly differently.
+    expect(progress.totalDays, WarrantyProgress.horizonDays);
+    expect(progress.progress, closeTo(180 / 1095, 0.01));
     expect(progress.progress, inInclusiveRange(0.0, 1.0));
   });
 

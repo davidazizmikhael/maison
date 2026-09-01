@@ -11,16 +11,23 @@ import '../exports/export_actions.dart';
 import 'edit_record_screen.dart';
 import 'timeline_cubit.dart';
 
-/// The warranty bar's model: time remaining as a fraction of the known
-/// coverage span (addedOn → warrantyUntil). Null when expired or absent.
+/// The warranty bar's model: time remaining measured against a fixed
+/// three-year horizon, so different amounts of runway LOOK different —
+/// 3+ years reads full, weeks read as a sliver. Null when expired or absent.
+/// (The true purchase date is unknowable until the AI reads receipts, so a
+/// span-based fraction would always be 100% on the day a record is created.)
 class WarrantyProgress {
   const WarrantyProgress(
       {required this.daysLeft, required this.totalDays, required this.progress});
+
+  /// Fixed reference horizon: the ceiling of typical consumer warranties.
+  static const horizonDays = 1095; // 3 years
+
   final int daysLeft;
   final int totalDays;
 
-  /// 1.0 = full coverage remaining, draining toward expiry (min 0.05 so a
-  /// nearly-expired warranty stays visible).
+  /// daysLeft / 3 years, clamped so even a nearly-expired warranty stays
+  /// visible as a sliver.
   final double progress;
 }
 
@@ -29,8 +36,8 @@ WarrantyProgress? calculateWarrantyProgress(HomeRecord record, {DateTime? now}) 
   final n = now ?? DateTime.now();
   if (w == null || !w.isAfter(n)) return null;
   final daysLeft = w.difference(n).inDays;
-  final totalDays = w.difference(record.addedOn).inDays.clamp(1, 3650);
-  final progress = (daysLeft / totalDays).clamp(0.05, 1.0).toDouble();
+  const totalDays = WarrantyProgress.horizonDays;
+  final progress = (daysLeft / totalDays).clamp(0.02, 1.0).toDouble();
   return WarrantyProgress(daysLeft: daysLeft, totalDays: totalDays, progress: progress);
 }
 
