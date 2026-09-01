@@ -1,9 +1,15 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models.dart';
+
+/// Who owns the current session.
+typedef AccountInfo = ({bool isAnonymous, String? email});
 
 /// Compile-time backend config. Run with:
 ///   flutter run --dart-define=SUPABASE_URL=https://xxx.supabase.co \
@@ -52,6 +58,13 @@ abstract class Backend {
 
   Future<void> completeReminder(String reminderId);
   Future<void> snoozeReminder(String reminderId, DateTime newDue);
+
+  /// The current session's identity state.
+  AccountInfo get account;
+
+  /// Links the anonymous session to the user's Apple ID (native flow).
+  /// Returns false if the user cancelled. Throws on real failures.
+  Future<bool> linkWithApple();
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId);
 
   static Backend get instance =>
@@ -101,6 +114,12 @@ class MockBackend implements Backend {
 
   @override
   Future<void> snoozeReminder(String reminderId, DateTime newDue) async {}
+
+  @override
+  AccountInfo get account => (isAnonymous: true, email: null);
+
+  @override
+  Future<bool> linkWithApple() async => throw UnsupportedError('demo mode');
 
   @override
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId) async =>
@@ -363,4 +382,50 @@ class SupabaseBackend implements Backend {
   }
 
   DateTime? _date(dynamic v) => v == null ? null : DateTime.tryParse(v as String);
+
+  @override
+  AccountInfo get account {
+    final user = _db.auth.currentUser;
+    return (
+      isAnonymous: user?.isAnonymous ?? true,
+      email: user?.email?.isNotEmpty == true ? user!.email : null,
+    );
+  }
+
+  @override
+  Future<bool> linkWithApple() async {
+    // Raw nonce goes to Supabase; its SHA-256 goes into the Apple request —
+    // gotrue verifies the pair to prevent token replay.
+    final rawNonce = _generateNonce();
+    final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+    final AuthorizationCredentialAppleID credential;
+    try {
+      credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return false;
+      rethrow;
+    }
+    final idToken = credential.identityToken;
+    if (idToken == null) {
+      throw const AuthException('Apple returned no identity token');
+    }
+    await _db.auth.linkIdentityWithIdToken(
+      provider: OAuthProvider.apple,
+      idToken: idToken,
+      nonce: rawNonce,
+    );
+    return true;
+  }
+
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
 }

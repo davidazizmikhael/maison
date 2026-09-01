@@ -796,6 +796,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
               controller: controller,
               keyboardType: keyboard,
               style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 isDense: true,
                 filled: true,

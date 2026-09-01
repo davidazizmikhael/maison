@@ -274,5 +274,13 @@
   },
   "tapToSet": "Tap to set",
   "editRecord": "Edit record",
-  "comingSoon": "Coming soon"
+  "comingSoon": "Coming soon",
+  "accountTitle": "Account",
+  "accountAnonymousTitle": "Your logbook isn't protected yet",
+  "accountAnonymousBody": "Right now your data is tied to this device. If the app is deleted, it can't be recovered. Sign in with Apple to keep your logbook safe and restorable.",
+  "linkWithApple": "Sign in with Apple",
+  "accountLinkedTitle": "Protected with Apple",
+  "accountLinkedBody": "Your logbook is tied to your Apple ID and can be restored on any device.",
+  "linkedSnack": "Account protected ✓",
+  "appleUnavailable": "Apple sign-in isn't enabled in this build yet — coming with the beta."
 }

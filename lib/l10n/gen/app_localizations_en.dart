@@ -510,4 +510,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get comingSoon => 'Coming soon';
+
+  @override
+  String get accountTitle => 'Account';
+
+  @override
+  String get accountAnonymousTitle => 'Your logbook isn\'t protected yet';
+
+  @override
+  String get accountAnonymousBody =>
+      'Right now your data is tied to this device. If the app is deleted, it can\'t be recovered. Sign in with Apple to keep your logbook safe and restorable.';
+
+  @override
+  String get linkWithApple => 'Sign in with Apple';
+
+  @override
+  String get accountLinkedTitle => 'Protected with Apple';
+
+  @override
+  String get accountLinkedBody =>
+      'Your logbook is tied to your Apple ID and can be restored on any device.';
+
+  @override
+  String get linkedSnack => 'Account protected ✓';
+
+  @override
+  String get appleUnavailable =>
+      'Apple sign-in isn\'t enabled in this build yet — coming with the beta.';
 }

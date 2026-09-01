@@ -148,5 +148,13 @@
   "pdfDoneOn": "Fait le {date}",
   "tapToSet": "Toucher pour définir",
   "editRecord": "Modifier l'enregistrement",
-  "comingSoon": "Bientôt disponible"
+  "comingSoon": "Bientôt disponible",
+  "accountTitle": "Compte",
+  "accountAnonymousTitle": "Votre carnet n'est pas encore protégé",
+  "accountAnonymousBody": "Vos données sont liées à cet appareil. Si l'application est supprimée, elles ne pourront pas être récupérées. Connectez-vous avec Apple pour protéger et restaurer votre carnet.",
+  "linkWithApple": "Se connecter avec Apple",
+  "accountLinkedTitle": "Protégé avec Apple",
+  "accountLinkedBody": "Votre carnet est lié à votre identifiant Apple et peut être restauré sur n'importe quel appareil.",
+  "linkedSnack": "Compte protégé ✓",
+  "appleUnavailable": "La connexion Apple n'est pas encore activée dans cette version — bientôt avec la bêta."
 }

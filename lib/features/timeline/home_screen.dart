@@ -7,6 +7,7 @@ import '../../data/backend.dart';
 import '../../data/models.dart';
 import '../add_entry/add_entry_screens.dart';
 import '../exports/exports_screen.dart';
+import '../session/account_sheet.dart';
 import '../session/language_sheet.dart';
 import '../session/session_cubit.dart';
 import 'record_detail_screen.dart';
@@ -38,6 +39,12 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
             actions: [
+              if (BackendConfig.enabled)
+                IconButton(
+                  icon: Icon(Icons.person_outline, color: context.mc.navy),
+                  tooltip: context.l10n.accountTitle,
+                  onPressed: () => showAccountSheet(context),
+                ),
               IconButton(
                 icon: Icon(Icons.language, color: context.mc.navy),
                 tooltip: context.l10n.languageTitle,

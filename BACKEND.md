@@ -1,5 +1,9 @@
 # Maison backend (Supabase)
 
+> Apple sign-in: provider is ENABLED on the project (native id-token flow,
+> authorized client id = com.davidazizmikhael.maison). The app-side entitlement
+> requires the paid Apple Developer account.
+
 > **Status (Aug 31, 2026):** project `YOUR_PROJECT_REF` (ca-central-1) is live —
 > schema pushed, anonymous sign-in enabled, `parse-entry` deployed. No
 > model provider key is set yet, so the function returns deterministic demo parses

@@ -511,4 +511,31 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get comingSoon => 'Bientôt disponible';
+
+  @override
+  String get accountTitle => 'Compte';
+
+  @override
+  String get accountAnonymousTitle => 'Votre carnet n\'est pas encore protégé';
+
+  @override
+  String get accountAnonymousBody =>
+      'Vos données sont liées à cet appareil. Si l\'application est supprimée, elles ne pourront pas être récupérées. Connectez-vous avec Apple pour protéger et restaurer votre carnet.';
+
+  @override
+  String get linkWithApple => 'Se connecter avec Apple';
+
+  @override
+  String get accountLinkedTitle => 'Protégé avec Apple';
+
+  @override
+  String get accountLinkedBody =>
+      'Votre carnet est lié à votre identifiant Apple et peut être restauré sur n\'importe quel appareil.';
+
+  @override
+  String get linkedSnack => 'Compte protégé ✓';
+
+  @override
+  String get appleUnavailable =>
+      'La connexion Apple n\'est pas encore activée dans cette version — bientôt avec la bêta.';
 }

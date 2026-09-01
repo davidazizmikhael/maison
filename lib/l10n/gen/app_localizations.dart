@@ -991,6 +991,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Coming soon'**
   String get comingSoon;
+
+  /// No description provided for @accountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get accountTitle;
+
+  /// No description provided for @accountAnonymousTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your logbook isn\'t protected yet'**
+  String get accountAnonymousTitle;
+
+  /// No description provided for @accountAnonymousBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Right now your data is tied to this device. If the app is deleted, it can\'t be recovered. Sign in with Apple to keep your logbook safe and restorable.'**
+  String get accountAnonymousBody;
+
+  /// No description provided for @linkWithApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Apple'**
+  String get linkWithApple;
+
+  /// No description provided for @accountLinkedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protected with Apple'**
+  String get accountLinkedTitle;
+
+  /// No description provided for @accountLinkedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your logbook is tied to your Apple ID and can be restored on any device.'**
+  String get accountLinkedBody;
+
+  /// No description provided for @linkedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Account protected ✓'**
+  String get linkedSnack;
+
+  /// No description provided for @appleUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple sign-in isn\'t enabled in this build yet — coming with the beta.'**
+  String get appleUnavailable;
 }
 
 class _AppLocalizationsDelegate
