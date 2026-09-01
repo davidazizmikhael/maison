@@ -35,7 +35,9 @@ Future<void> showCaptureSheet(BuildContext context, CaptureMode mode) async {
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-    constraints: BoxConstraints(maxHeight: context.size!.height * 0.8),
+    // Size from the screen, not the caller — the compose bar's own render box
+    // is only ~70px tall.
+    constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
     builder: (_) => CaptureSheet(mode: mode),
   );
   if (result == null || !context.mounted) return; // dismissed

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:maison/data/notifications.dart';
+import 'package:maison/features/add_entry/add_entry_screens.dart';
 import 'package:maison/main.dart' as app;
 
 /// Walks the full Maison user journey and captures a screenshot at each step.
@@ -60,6 +61,17 @@ void main() {
 
     // 2 — Home dashboard
     await shot(tester, '04-home-dashboard');
+
+    // 2b — Compose-bar camera opens a full-height capture sheet (regression:
+    // it was sized from the compose bar's own ~70px render box). Verify the
+    // shutter is actually hit-testable, then dismiss via the barrier.
+    await tester.tap(find.byKey(const Key('compose-camera')));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.byKey(const Key('capture')));
+    expect(tester.getSize(find.byType(CaptureSheet)).height, greaterThan(400));
+    await tester.tapAt(const Offset(200, 60));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.byKey(const Key('compose-field')));
 
     // 3 — Add: compose bar → New entry → scan a nameplate
     await tester.tap(find.byKey(const Key('compose-field')));
