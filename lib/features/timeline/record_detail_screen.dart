@@ -80,9 +80,10 @@ class RecordDetailScreen extends StatelessWidget {
     int? warrantyDaysLeft;
     if (w != null && w.isAfter(now)) {
       warrantyDaysLeft = w.difference(now).inDays;
-      // Assume a warranty horizon of up to 6 years for the progress bar.
+      // The bar shows time REMAINING: full when the warranty is fresh,
+      // draining toward expiry (addedOn approximates the purchase date).
       final total = w.difference(record.addedOn).inDays.clamp(1, 3650);
-      warrantyFraction = 1 - (warrantyDaysLeft / total).clamp(0.0, 1.0);
+      warrantyFraction = (warrantyDaysLeft / total).clamp(0.05, 1.0);
     }
 
     return Scaffold(
@@ -156,7 +157,11 @@ class RecordDetailScreen extends StatelessWidget {
                     const Text('🛡️ Warranty', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800)),
                     const Spacer(),
                     Tag('$warrantyDaysLeft DAYS LEFT',
-                        color: context.mc.greenWash, textColor: context.mc.green),
+                        color: warrantyDaysLeft < 30
+                            ? context.mc.accentWash
+                            : context.mc.greenWash,
+                        textColor:
+                            warrantyDaysLeft < 30 ? context.mc.accentDeep : context.mc.green),
                   ]),
                   const SizedBox(height: 12),
                   ClipRRect(
@@ -165,7 +170,7 @@ class RecordDetailScreen extends StatelessWidget {
                       value: warrantyFraction,
                       minHeight: 9,
                       backgroundColor: context.mc.paper,
-                      color: context.mc.green,
+                      color: warrantyDaysLeft < 30 ? context.mc.accent : context.mc.green,
                     ),
                   ),
                   const SizedBox(height: 10),
