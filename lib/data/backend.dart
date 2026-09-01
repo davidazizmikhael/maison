@@ -113,7 +113,24 @@ class SupabaseBackend implements Backend {
 
   @override
   Future<void> signInAnonymously() async {
-    if (_db.auth.currentSession == null) {
+    final session = _db.auth.currentSession;
+    if (session == null) {
+      await _db.auth.signInAnonymously();
+      return;
+    }
+    try {
+      // Validate the persisted session up front. Refresh tokens are
+      // single-use, so a race (hot restart, parallel instance) can leave a
+      // dead session behind — recycle it instead of aborting every request.
+      if (session.isExpired) {
+        await _db.auth.refreshSession();
+      }
+    } on AuthException {
+      try {
+        await _db.auth.signOut(scope: SignOutScope.local);
+      } catch (_) {
+        // The session is already unusable; clearing local state is enough.
+      }
       await _db.auth.signInAnonymously();
     }
   }
