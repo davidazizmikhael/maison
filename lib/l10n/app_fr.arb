@@ -161,5 +161,19 @@
   "fileIt": "Classer",
   "newEntryTitle": "Nouvelle entrée",
   "doneShort": "fait",
-  "todayHeader": "Aujourd'hui"
+  "todayHeader": "Aujourd'hui",
+  "homeGreeting": "Bonjour",
+  "healthGreat": "Maison en pleine forme",
+  "healthGood": "Maison en bonne forme",
+  "healthAttention": "Quelques choses à surveiller",
+  "healthBody": "{count, plural, =1{1 chose à venir. On la règle aujourd'hui?} other{{count} choses à venir. On en règle une aujourd'hui?}}",
+  "@healthBody": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "healthClear": "Rien à l'horaire. Profitez du calme.",
+  "sectionRecent": "Classés récemment"
 }

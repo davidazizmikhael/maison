@@ -1069,6 +1069,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Today'**
   String get todayHeader;
+
+  /// No description provided for @homeGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hey there'**
+  String get homeGreeting;
+
+  /// No description provided for @healthGreat.
+  ///
+  /// In en, this message translates to:
+  /// **'House in great shape'**
+  String get healthGreat;
+
+  /// No description provided for @healthGood.
+  ///
+  /// In en, this message translates to:
+  /// **'House in good shape'**
+  String get healthGood;
+
+  /// No description provided for @healthAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'A few things need attention'**
+  String get healthAttention;
+
+  /// No description provided for @healthBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 thing coming up. Knock it out today?} other{{count} things coming up. Knock one out today?}}'**
+  String healthBody(num count);
+
+  /// No description provided for @healthClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due. Enjoy the quiet.'**
+  String get healthClear;
+
+  /// No description provided for @sectionRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently filed'**
+  String get sectionRecent;
 }
 
 class _AppLocalizationsDelegate

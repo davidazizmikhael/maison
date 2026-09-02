@@ -552,4 +552,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todayHeader => 'Today';
+
+  @override
+  String get homeGreeting => 'Hey there';
+
+  @override
+  String get healthGreat => 'House in great shape';
+
+  @override
+  String get healthGood => 'House in good shape';
+
+  @override
+  String get healthAttention => 'A few things need attention';
+
+  @override
+  String healthBody(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count things coming up. Knock one out today?',
+      one: '1 thing coming up. Knock it out today?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get healthClear => 'Nothing due. Enjoy the quiet.';
+
+  @override
+  String get sectionRecent => 'Recently filed';
 }

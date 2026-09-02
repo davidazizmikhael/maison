@@ -287,5 +287,19 @@
   "fileIt": "File it",
   "newEntryTitle": "New entry",
   "doneShort": "done",
-  "todayHeader": "Today"
+  "todayHeader": "Today",
+  "homeGreeting": "Hey there",
+  "healthGreat": "House in great shape",
+  "healthGood": "House in good shape",
+  "healthAttention": "A few things need attention",
+  "healthBody": "{count, plural, =1{1 thing coming up. Knock it out today?} other{{count} things coming up. Knock one out today?}}",
+  "@healthBody": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "healthClear": "Nothing due. Enjoy the quiet.",
+  "sectionRecent": "Recently filed"
 }

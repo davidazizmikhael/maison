@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:maison/core/motion.dart';
 import 'package:maison/data/notifications.dart';
 import 'package:maison/features/add_entry/add_entry_screens.dart';
 import 'package:maison/main.dart' as app;
@@ -32,6 +33,7 @@ void main() {
   }
 
   testWidgets('Full Maison walkthrough', (tester) async {
+    MaisonMotion.ambient = false; // looping floats never settle under pumpAndSettle
     app.main();
     await tester.pumpAndSettle();
     // Android renders test screenshots from an offscreen image surface.
@@ -62,23 +64,15 @@ void main() {
     // 2 — Home dashboard
     await shot(tester, '04-home-dashboard');
 
-    // 2b — Compose-bar camera opens a full-height capture sheet (regression:
-    // it was sized from the compose bar's own ~70px render box). Verify the
-    // shutter is actually hit-testable, then dismiss via the barrier.
-    await tester.tap(find.byKey(const Key('compose-camera')));
-    await tester.pumpAndSettle();
-    await waitFor(tester, find.byKey(const Key('capture')));
-    expect(tester.getSize(find.byType(CaptureSheet)).height, greaterThan(400));
-    await tester.tapAt(const Offset(200, 60));
-    await tester.pumpAndSettle();
-    await waitFor(tester, find.byKey(const Key('compose-field')));
-
-    // 3 — Add: compose bar → New entry → scan a nameplate
+    // 3 — Add: camera button → New entry → scan a nameplate
     await tester.tap(find.byKey(const Key('compose-field')));
     await tester.pumpAndSettle();
     await shot(tester, '05-new-entry');
     await tester.tap(find.text('Scan a nameplate'));
     await tester.pumpAndSettle();
+    await waitFor(tester, find.byKey(const Key('capture')));
+    // Regression: the sheet was once sized from its caller's tiny render box.
+    expect(tester.getSize(find.byType(CaptureSheet)).height, greaterThan(400));
     await shot(tester, '06-camera-nameplate');
     await tester.tap(find.byKey(const Key('capture')));
     await tester.pump(const Duration(milliseconds: 400));
@@ -107,8 +101,12 @@ void main() {
     await waitFor(tester, find.text('Furnace — Lennox ML296V'));
     await shot(tester, '09-home-after-save');
 
-    // 5 — Record detail (exact title: 'textContaining' would also match the
-    // reminder card's subtitle, which isn't tappable)
+    // 5 — Record detail (the rail can sit below the fold — scroll to it, and
+    // let the floating "saved" snackbar expire; it hovers over the rail)
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Furnace — Lennox ML296V'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Furnace — Lennox ML296V'));
     await tester.pumpAndSettle();
     await waitFor(tester, find.text('View manual'));
@@ -147,7 +145,11 @@ void main() {
     await tester.pumpAndSettle();
     await waitFor(tester, find.byKey(const Key('compose-field')));
 
-    // 6b — Delete the note record from its detail screen
+    // 6b — Delete the note record from its detail screen (snackbar again)
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Bathroom faucet repair'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Bathroom faucet repair'));
     await tester.pumpAndSettle();
     await waitFor(tester, find.text('View manual'));
@@ -193,14 +195,14 @@ void main() {
     await shot(tester, '15-language-sheet');
     await tester.tap(find.text('Français'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.text("Ajoutez n'importe quoi — écrivez ou photographiez"));
-    expect(find.text('À venir'), findsOneWidget);
+    await waitFor(tester, find.text('À VENIR'));
+    expect(find.text('CLASSÉS RÉCEMMENT'), findsOneWidget);
     await shot(tester, '16-home-french');
     await tester.tap(find.byIcon(Icons.language));
     await tester.pumpAndSettle();
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.text('Add anything — type it or snap it'));
+    await waitFor(tester, find.text('UP NEXT'));
 
     // 10 — Theme: simulate the device flipping to dark, verify the palette follows
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;

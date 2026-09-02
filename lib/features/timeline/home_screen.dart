@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/l10n_ext.dart';
+import '../../core/motion.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
 import '../../data/models.dart';
@@ -13,17 +16,11 @@ import '../session/session_cubit.dart';
 import 'record_detail_screen.dart';
 import 'timeline_cubit.dart';
 
-/// The house journal: a Notes-style document — header, checklist, dated
-/// entries, and a compose bar. No cards, hairlines only.
+/// The lively home: greeting, an animated house-health ring, floating
+/// "up next" cards, a horizontal rail of recent records, and a centered
+/// camera button. (The "Springy Cards" direction, remixed.)
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  String _profileSummary(BuildContext context, HomeProfile p) {
-    // The chips carry emoji for chip UI; the document header wants plain text.
-    return localizedChips(context.l10n, p)
-        .map((c) => c.replaceFirst(RegExp(r'^\S+\s'), ''))
-        .join(' · ');
-  }
 
   String _dueShort(BuildContext context, Reminder r) {
     final d = r.daysLeft;
@@ -32,29 +29,26 @@ class HomeScreen extends StatelessWidget {
     return context.l10n.statDays(d);
   }
 
-  String _dateHeader(BuildContext context, DateTime d) {
-    final now = DateTime.now();
-    if (d.year == now.year && d.month == now.month && d.day == now.day) {
-      return context.l10n.todayHeader;
+  /// Honest-but-simple score: every pending reminder costs points, overdue
+  /// ones cost the most. Floors at 35 so the ring never looks broken.
+  int _healthScore(List<Reminder> pending) {
+    var s = 100;
+    for (final r in pending) {
+      final d = r.daysLeft;
+      s -= d <= 0 ? 18 : (d <= 14 ? 10 : 4);
     }
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${months[d.month - 1]} ${d.day}${d.year == now.year ? '' : ', ${d.year}'}';
+    return s.clamp(35, 100);
   }
 
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionCubit>().state;
     final address = session is SessionReady ? session.address : '';
-    final profile = session is SessionReady ? session.profile : null;
     final homeId = session is SessionReady ? session.homeId : null;
     return BlocBuilder<TimelineCubit, TimelineState>(
       builder: (context, state) {
-        // Group records by calendar day, newest first (list is already sorted).
-        final groups = <String, List<HomeRecord>>{};
-        for (final r in state.records) {
-          groups.putIfAbsent(_dateHeader(context, r.addedOn), () => []).add(r);
-        }
         final completedPreview = state.completed.take(3).toList();
+        final score = _healthScore(state.pending);
         return Scaffold(
           appBar: AppBar(
             toolbarHeight: 44,
@@ -79,70 +73,94 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(width: 8),
             ],
           ),
-          body: Column(
-            children: [
-              Expanded(
-                child: RefreshIndicator(
-                  color: context.mc.accent,
-                  onRefresh: () async {
-                    if (homeId == null) return;
-                    await context.read<TimelineCubit>().load(homeId);
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+          body: RefreshIndicator(
+            color: context.mc.accent,
+            onRefresh: () async {
+              if (homeId == null) return;
+              await context.read<TimelineCubit>().load(homeId);
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 110),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text('MAISON',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 2.2,
-                              color: context.mc.accentDeep)),
-                      const SizedBox(height: 4),
-                      Text(address,
+                      Text(context.l10n.homeGreeting,
                           style: const TextStyle(
-                              fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.5)),
-                      if (profile != null) ...[
-                        const SizedBox(height: 4),
-                        Text(_profileSummary(context, profile),
+                              fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(address,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
                             style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
-                      ],
-                      if (state.pending.isNotEmpty || completedPreview.isNotEmpty) ...[
-                        const SizedBox(height: 24),
-                        _SectionLabel(context.l10n.sectionUpNext),
-                        const SizedBox(height: 2),
-                        for (final r in state.pending)
-                          _ReminderRow(
-                            reminder: r,
-                            due: _dueShort(context, r),
-                            urgent: r.daysLeft <= 14,
-                            onTap: () => showReminderActions(context, r, homeId),
-                          ),
-                        for (final r in completedPreview) _DoneRow(reminder: r),
-                      ],
-                      const SizedBox(height: 18),
-                      Container(height: 1, color: context.mc.line),
-                      const SizedBox(height: 6),
-                      if (state.records.isEmpty) ...[
-                        const SizedBox(height: 18),
-                        Text(context.l10n.emptyTitle,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 6),
-                        Text(context.l10n.emptyBody,
-                            style: TextStyle(
-                                fontSize: 13, color: context.mc.inkSoft, height: 1.45)),
-                      ] else
-                        for (final entry in groups.entries) ...[
-                          const SizedBox(height: 16),
-                          _SectionLabel(entry.key),
-                          const SizedBox(height: 4),
-                          for (final r in entry.value) _RecordRow(record: r),
-                        ],
+                      ),
                     ],
                   ),
                 ),
-              ),
-              _ComposeBar(),
-            ],
+                const SizedBox(height: 16),
+                _HealthHero(score: score, pendingCount: state.pending.length),
+                if (state.pending.isNotEmpty || completedPreview.isNotEmpty) ...[
+                  const SizedBox(height: 22),
+                  _SectionLabel(context.l10n.sectionUpNext),
+                  const SizedBox(height: 10),
+                  for (var i = 0; i < state.pending.length; i++) ...[
+                    FloatingCard(
+                      duration: Duration(milliseconds: 3800 + i * 500),
+                      phase: i * 0.3,
+                      child: _ReminderCard(
+                        reminder: state.pending[i],
+                        due: _dueShort(context, state.pending[i]),
+                        urgent: state.pending[i].daysLeft <= 14,
+                        onTap: () => showReminderActions(context, state.pending[i], homeId),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  for (final r in completedPreview) _DoneRow(reminder: r),
+                ],
+                const SizedBox(height: 22),
+                _SectionLabel(context.l10n.sectionRecent),
+                const SizedBox(height: 12),
+                if (state.records.isEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(context.l10n.emptyTitle,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      Text(context.l10n.emptyBody,
+                          style:
+                              TextStyle(fontSize: 13, color: context.mc.inkSoft, height: 1.45)),
+                    ]),
+                  ),
+                ] else
+                  SizedBox(
+                    height: 168,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      itemCount: state.records.length,
+                      separatorBuilder: (_, index) => const SizedBox(width: 12),
+                      itemBuilder: (context, i) => FloatingCard(
+                        duration: Duration(milliseconds: 4200 + (i % 3) * 500),
+                        phase: i * 0.35,
+                        child: _RecordCard(record: state.records[i]),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: _CameraButton(
+            key: const Key('compose-field'),
+            onTap: () =>
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => QuickNoteScreen())),
           ),
         );
       },
@@ -155,9 +173,100 @@ class _SectionLabel extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) {
-    return Text(text,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.mc.inkSoft));
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(text.toUpperCase(),
+          style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.6,
+              color: context.mc.inkSoft)),
+    );
   }
+}
+
+/// Dark hero card with a ring that draws itself to the health score.
+/// Permanently-dark brand surface, same in both themes.
+class _HealthHero extends StatelessWidget {
+  const _HealthHero({required this.score, required this.pendingCount});
+  final int score;
+  final int pendingCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final title = score >= 85
+        ? l10n.healthGreat
+        : score >= 60
+            ? l10n.healthGood
+            : l10n.healthAttention;
+    final body = pendingCount == 0 ? l10n.healthClear : l10n.healthBody(pendingCount);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MaisonColors.ink,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(children: [
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: score / 100),
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, _) => CustomPaint(
+            size: const Size(72, 72),
+            painter: _RingPainter(fraction: value, accent: context.mc.accent),
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: Center(
+                child: Text('${(value * 100).round()}',
+                    style: const TextStyle(
+                        fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+            const SizedBox(height: 4),
+            Text(body,
+                style: const TextStyle(fontSize: 13, color: Color(0xFFA8B0BD), height: 1.4)),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter({required this.fraction, required this.accent});
+  final double fraction;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 3;
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..color = const Color(0xFF2E3644);
+    canvas.drawCircle(center, radius, track);
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..color = accent;
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -math.pi / 2,
+        2 * math.pi * fraction, false, arc);
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.fraction != fraction || old.accent != accent;
 }
 
 void showReminderActions(BuildContext context, Reminder reminder, String? homeId) {
@@ -213,8 +322,8 @@ void showReminderActions(BuildContext context, Reminder reminder, String? homeId
   );
 }
 
-class _ReminderRow extends StatelessWidget {
-  const _ReminderRow(
+class _ReminderCard extends StatelessWidget {
+  const _ReminderCard(
       {required this.reminder, required this.due, required this.urgent, required this.onTap});
   final Reminder reminder;
   final String due;
@@ -226,23 +335,38 @@ class _ReminderRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        height: 44,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: urgent ? context.mc.accentWash : context.mc.card,
+          borderRadius: BorderRadius.circular(18),
+          border: urgent ? null : Border.all(color: context.mc.line),
+        ),
         child: Row(children: [
-          Icon(Icons.circle_outlined,
-              size: 17, color: urgent ? context.mc.accent : context.mc.line),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(reminder.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 15)),
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: urgent ? context.mc.accent : context.mc.line, width: 2),
+            ),
           ),
-          Text(due,
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: urgent ? FontWeight.w600 : FontWeight.w400,
-                  color: urgent ? context.mc.accentDeep : context.mc.inkSoft)),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(reminder.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(due,
+                  style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: urgent ? FontWeight.w600 : FontWeight.w400,
+                      color: urgent ? context.mc.accentDeep : context.mc.inkSoft)),
+            ]),
+          ),
         ]),
       ),
     );
@@ -256,29 +380,34 @@ class _DoneRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 44,
-      child: Row(children: [
-        Icon(Icons.check, size: 17, color: context.mc.green),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(reminder.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 15,
-                  color: context.mc.inkSoft,
-                  decoration: TextDecoration.lineThrough,
-                  decorationColor: context.mc.inkSoft)),
-        ),
-        Text(context.l10n.doneShort,
-            style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
-      ]),
+      height: 40,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(children: [
+          Icon(Icons.check, size: 17, color: context.mc.green),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(reminder.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 14.5,
+                    color: context.mc.inkSoft,
+                    decoration: TextDecoration.lineThrough,
+                    decorationColor: context.mc.inkSoft)),
+          ),
+          Text(context.l10n.doneShort,
+              style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
+        ]),
+      ),
     );
   }
 }
 
-class _RecordRow extends StatelessWidget {
-  const _RecordRow({required this.record});
+/// One card in the "recently filed" rail: photo (or tinted placeholder) on
+/// top, title and meta beneath.
+class _RecordCard extends StatelessWidget {
+  const _RecordCard({required this.record});
   final HomeRecord record;
 
   String _meta(BuildContext context) {
@@ -286,7 +415,6 @@ class _RecordRow extends StatelessWidget {
       record.room,
       if (record.cost != null)
         '\$${record.cost!.toStringAsFixed(record.cost! % 1 == 0 ? 0 : 2)}',
-      if (record.vendor != null) record.vendor!,
       if (record.warrantyUntil != null)
         '${context.l10n.labelWarranty.toLowerCase()} ${record.warrantyUntil!.year}',
     ].join(' · ');
@@ -294,107 +422,83 @@ class _RecordRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: () => Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => RecordDetailScreen(record: record))),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        child: Row(children: [
-          Expanded(
+      child: Container(
+        width: 158,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: context.mc.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: context.mc.line),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(
+            height: 92,
+            width: double.infinity,
+            child: record.photoPath == null
+                ? Container(
+                    color: context.mc.navyWash,
+                    child: Icon(Icons.inventory_2_outlined,
+                        size: 30, color: context.mc.navy),
+                  )
+                : FutureBuilder<String?>(
+                    future: Backend.instance.photoUrl(record.photoPath!),
+                    builder: (context, snapshot) {
+                      final url = snapshot.data;
+                      return url == null
+                          ? Container(color: context.mc.line)
+                          : Image.network(url, fit: BoxFit.cover,
+                              errorBuilder: (context, error, stack) =>
+                                  Container(color: context.mc.line));
+                    },
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 11, 14, 0),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(record.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
               const SizedBox(height: 3),
               Text(_meta(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
+                  style: TextStyle(fontSize: 12, color: context.mc.inkSoft)),
             ]),
           ),
-          if (record.photoPath != null) ...[
-            const SizedBox(width: 12),
-            FutureBuilder<String?>(
-              future: Backend.instance.photoUrl(record.photoPath!),
-              builder: (context, snapshot) {
-                final url = snapshot.data;
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(9),
-                  child: SizedBox(
-                    width: 46,
-                    height: 46,
-                    child: url == null
-                        ? Container(color: context.mc.line)
-                        : Image.network(url, fit: BoxFit.cover,
-                            errorBuilder: (context, error, stack) =>
-                                Container(color: context.mc.line)),
-                  ),
-                );
-              },
-            ),
-          ],
         ]),
       ),
     );
   }
 }
 
-/// Notes-style compose bar: tap anywhere to write; the camera goes straight
-/// to scanning.
-class _ComposeBar extends StatelessWidget {
-  void _openEntry(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => QuickNoteScreen()));
-  }
+/// Centered camera button (the "Widget Board" placement): opens the New
+/// entry screen — type a note or jump to a scan from there.
+class _CameraButton extends StatelessWidget {
+  const _CameraButton({super.key, required this.onTap});
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.mc.paper,
-        border: Border(top: BorderSide(color: context.mc.line)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 10, 16, 10),
-      child: SafeArea(
-        top: false,
-        child: Row(children: [
-          GestureDetector(
-            key: const Key('compose-camera'),
-            onTap: () => showCaptureSheet(context, CaptureMode.nameplate),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child:
-                  Icon(Icons.photo_camera_outlined, size: 24, color: context.mc.accentDeep),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: GestureDetector(
-              key: const Key('compose-field'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _openEntry(context),
-              child: SizedBox(
-                height: 44,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(context.l10n.composeHint,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 15, color: context.mc.inkSoft)),
-                ),
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _openEntry(context),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: context.mc.accent),
-              child: const Icon(Icons.add, size: 22, color: Colors.white),
-            ),
-          ),
-        ]),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: context.mc.accent,
+          boxShadow: [
+            BoxShadow(
+                color: context.mc.accent.withValues(alpha: 0.45),
+                blurRadius: 24,
+                offset: const Offset(0, 8)),
+          ],
+        ),
+        child: const Icon(Icons.photo_camera_outlined, size: 26, color: MaisonColors.ink),
       ),
     );
   }

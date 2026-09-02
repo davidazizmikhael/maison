@@ -554,4 +554,33 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get todayHeader => 'Aujourd\'hui';
+
+  @override
+  String get homeGreeting => 'Bonjour';
+
+  @override
+  String get healthGreat => 'Maison en pleine forme';
+
+  @override
+  String get healthGood => 'Maison en bonne forme';
+
+  @override
+  String get healthAttention => 'Quelques choses à surveiller';
+
+  @override
+  String healthBody(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count choses à venir. On en règle une aujourd\'hui?',
+      one: '1 chose à venir. On la règle aujourd\'hui?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get healthClear => 'Rien à l\'horaire. Profitez du calme.';
+
+  @override
+  String get sectionRecent => 'Classés récemment';
 }
