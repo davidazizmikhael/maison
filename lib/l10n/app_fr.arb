@@ -182,5 +182,17 @@
   "deleteAccountBody": "Cette action supprime définitivement votre compte ainsi que tous vos dossiers, photos et rappels. Aucun retour en arrière — exportez d'abord vos documents si vous voulez une copie.",
   "deleteAccountConfirm": "Tout supprimer",
   "deleteAccountDoneSnack": "Compte supprimé",
-  "rateLimitedError": "Vous avez atteint la limite quotidienne d'IA. Elle se réinitialise demain — votre photo reste sur votre téléphone d'ici là."
+  "rateLimitedError": "Vous avez atteint la limite quotidienne d'IA. Elle se réinitialise demain — votre photo reste sur votre téléphone d'ici là.",
+  "backupTitle": "Sauvegarde complète",
+  "backupBody": "Tout ce que vous avez classé — dossiers, rappels et photos originales — en JSON, CSV et images dans un seul ZIP. Vos données ne sont jamais captives.",
+  "backupCta": "Tout exporter",
+  "backupReady": "📦  Sauvegarde prête",
+  "backupReadyBody": "{count} dossiers avec leurs photos, en JSON + CSV dans un ZIP. Enregistrez-le où vous voulez — il vous appartient.",
+  "@backupReadyBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

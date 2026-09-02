@@ -606,4 +606,22 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get rateLimitedError =>
       'Vous avez atteint la limite quotidienne d\'IA. Elle se réinitialise demain — votre photo reste sur votre téléphone d\'ici là.';
+
+  @override
+  String get backupTitle => 'Sauvegarde complète';
+
+  @override
+  String get backupBody =>
+      'Tout ce que vous avez classé — dossiers, rappels et photos originales — en JSON, CSV et images dans un seul ZIP. Vos données ne sont jamais captives.';
+
+  @override
+  String get backupCta => 'Tout exporter';
+
+  @override
+  String get backupReady => '📦  Sauvegarde prête';
+
+  @override
+  String backupReadyBody(int count) {
+    return '$count dossiers avec leurs photos, en JSON + CSV dans un ZIP. Enregistrez-le où vous voulez — il vous appartient.';
+  }
 }

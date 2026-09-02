@@ -180,6 +180,16 @@ void main() {
     expect(find.text('📄  PDF ready'), findsOneWidget);
     await tester.tap(find.text('Nice'));
     await tester.pumpAndSettle();
+
+    // 7b — Full backup ZIP (the "everything out, always" promise)
+    await tester.ensureVisible(find.text('Export everything'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Export everything'));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('📦  Backup ready'));
+    await shot(tester, '14b-backup-ready');
+    await tester.tap(find.text('Nice'));
+    await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
 

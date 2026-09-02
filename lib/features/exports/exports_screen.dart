@@ -1,13 +1,17 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
 import '../../data/models.dart';
 import '../session/session_cubit.dart';
 import '../timeline/timeline_cubit.dart';
+import 'data_export.dart';
 import 'export_actions.dart';
 import 'pdf_builder.dart';
 
@@ -124,6 +128,69 @@ class _ExportsScreenState extends State<ExportsScreen> {
     }, what: l10n.inventoryTitle, filename: 'maison-insurance-inventory.pdf');
   }
 
+  Future<void> _backup() async {
+    if (_guardEmpty()) return;
+    final l10n = context.l10n;
+    final session = context.read<SessionCubit>().state;
+    final profile = session is SessionReady ? session.profile : null;
+    final address = _address;
+    final timeline = context.read<TimelineCubit>().state;
+    setState(() => _busy = 'backup');
+    try {
+      final photos = <String, Uint8List>{};
+      for (final r in timeline.records) {
+        if (r.photoPath == null) continue;
+        final bytes = await Backend.instance.photoBytes(r.photoPath!);
+        if (bytes != null) photos[r.photoPath!] = bytes;
+      }
+      final zip = buildBackupZip(
+        address: address,
+        profile: profile,
+        records: timeline.records,
+        reminders: timeline.reminders,
+        photos: photos,
+      );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: dialogContext.mc.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Text(l10n.backupReady,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          content: Text(l10n.backupReadyBody(timeline.records.length),
+              style:
+                  TextStyle(fontSize: 14.5, height: 1.5, color: dialogContext.mc.inkSoft)),
+          actions: [
+            TextButton.icon(
+              icon: Icon(Icons.ios_share, size: 18, color: dialogContext.mc.accentDeep),
+              label: Text(l10n.shareButton,
+                  style: TextStyle(
+                      color: dialogContext.mc.accentDeep, fontWeight: FontWeight.w700)),
+              onPressed: () async {
+                final dir = await getTemporaryDirectory();
+                final file = File('${dir.path}/maison-backup.zip');
+                await file.writeAsBytes(zip);
+                await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+              },
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.niceButton),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.saveError('$e'))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
   Future<void> _history() async {
     if (_guardEmpty()) return;
     final l10n = context.l10n;
@@ -171,6 +238,13 @@ class _ExportsScreenState extends State<ExportsScreen> {
             body: context.l10n.historyBody,
             cta: _busy == 'history' ? context.l10n.generatingLabel : context.l10n.historyCta,
             onTap: _busy == null ? _history : null,
+          ),
+          _ExportCard(
+            emoji: '📦',
+            title: context.l10n.backupTitle,
+            body: context.l10n.backupBody,
+            cta: _busy == 'backup' ? context.l10n.generatingLabel : context.l10n.backupCta,
+            onTap: _busy == null ? _backup : null,
           ),
         ],
       ),

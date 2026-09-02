@@ -50,6 +50,9 @@ dependencies:
   sign_in_with_apple: ^8.1.0
   crypto: ^3.0.7
   sentry_flutter: ^9.28.0
+  archive: ^4.0.9
+  share_plus: ^13.3.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

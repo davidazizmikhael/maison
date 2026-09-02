@@ -1153,6 +1153,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'ve hit today\'s AI limit. It resets tomorrow — your photo stays on your phone in the meantime.'**
   String get rateLimitedError;
+
+  /// No description provided for @backupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Full backup'**
+  String get backupTitle;
+
+  /// No description provided for @backupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything you\'ve ever filed — records, reminders and original photos — as open JSON, CSV and images in one ZIP. Your data is never locked in.'**
+  String get backupBody;
+
+  /// No description provided for @backupCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Export everything'**
+  String get backupCta;
+
+  /// No description provided for @backupReady.
+  ///
+  /// In en, this message translates to:
+  /// **'📦  Backup ready'**
+  String get backupReady;
+
+  /// No description provided for @backupReadyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} records with their photos, as JSON + CSV in one ZIP. Save it anywhere — it\'s yours.'**
+  String backupReadyBody(int count);
 }
 
 class _AppLocalizationsDelegate
