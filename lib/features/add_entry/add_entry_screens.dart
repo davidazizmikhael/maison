@@ -18,9 +18,12 @@ import 'add_entry_cubit.dart';
 /// Route that owns one AddEntryCubit for the parse leg of the journey.
 Route<void> parsingRoute(CaptureMode mode, {String? noteText, Uint8List? imageBytes}) {
   return MaterialPageRoute(
-    builder: (_) => BlocProvider(
+    builder: (routeContext) => BlocProvider(
       create: (_) => AddEntryCubit(Backend.instance)
-        ..parse(mode, noteText: noteText, imageBytes: imageBytes),
+        ..parse(mode,
+            noteText: noteText,
+            imageBytes: imageBytes,
+            returnReminderTitle: routeContext.l10n.returnWindowReminder),
       child: ParsingScreen(mode: mode, imageBytes: imageBytes),
     ),
   );

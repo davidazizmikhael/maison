@@ -301,5 +301,6 @@
     }
   },
   "healthClear": "Nothing due. Enjoy the quiet.",
-  "sectionRecent": "Recently filed"
+  "sectionRecent": "Recently filed",
+  "returnWindowReminder": "Return window closes"
 }

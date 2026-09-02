@@ -92,10 +92,15 @@ function instructionFor(mode: string, today: string): string {
         `Extract the brand and model into title (e.g. "Furnace — Lennox ML296V"), the serial into model_serial, ` +
         `kind is "appliance". Infer the room from the appliance type (furnace/water heater → Basement, etc.).`;
     case "receipt":
-      return `${base} The image is a purchase receipt or contractor invoice. ` +
+      return `${base} The image is a purchase receipt or contractor invoice — ANY retail purchase counts, ` +
+        `not just home items: clothing, shoes, electronics, gifts. ` +
         `Extract the main item into title, total price into cost, the store/contractor into vendor. ` +
         `kind is "receipt" for store purchases or "service" for contractor work. ` +
-        `Estimate warranty_until from any stated warranty terms and return_by from the store's return policy if printed.`;
+        `For non-home items use room "Home". ` +
+        `Estimate warranty_until from any stated warranty terms. For return_by: use the return policy printed ` +
+        `on the receipt; when none is printed but the retailer's standard policy is widely known (e.g. 30 days), ` +
+        `use it and set confidence "low"; otherwise null. When return_by is set, ALWAYS include a reminder ` +
+        `titled like "Return window closes" due 3 days before return_by so the buyer can still act on it.`;
     default:
       return `${base} The input is a free-text note the homeowner typed. kind is usually "service". ` +
         `Extract what was done into title, parts/details into subtitle, price into cost, who did it into vendor. ` +

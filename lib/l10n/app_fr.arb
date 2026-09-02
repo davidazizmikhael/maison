@@ -175,5 +175,6 @@
     }
   },
   "healthClear": "Rien à l'horaire. Profitez du calme.",
-  "sectionRecent": "Classés récemment"
+  "sectionRecent": "Classés récemment",
+  "returnWindowReminder": "La fenêtre de retour se termine"
 }

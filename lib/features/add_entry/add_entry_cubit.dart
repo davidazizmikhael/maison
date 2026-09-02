@@ -45,10 +45,14 @@ class AddEntryCubit extends Cubit<AddEntryState> {
 
   final Backend _backend;
 
-  Future<void> parse(CaptureMode mode, {String? noteText, Uint8List? imageBytes}) async {
+  Future<void> parse(CaptureMode mode,
+      {String? noteText, Uint8List? imageBytes, String? returnReminderTitle}) async {
     emit(const AddEntryParsing());
     try {
-      final result = await _backend.parseEntry(mode, noteText: noteText, imageBytes: imageBytes);
+      var result = await _backend.parseEntry(mode, noteText: noteText, imageBytes: imageBytes);
+      if (returnReminderTitle != null) {
+        result = ensureReturnReminder(result, returnReminderTitle);
+      }
       emit(AddEntryParsed(result));
     } catch (e) {
       emit(AddEntryError('$e'));

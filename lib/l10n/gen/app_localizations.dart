@@ -1111,6 +1111,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recently filed'**
   String get sectionRecent;
+
+  /// No description provided for @returnWindowReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Return window closes'**
+  String get returnWindowReminder;
 }
 
 class _AppLocalizationsDelegate

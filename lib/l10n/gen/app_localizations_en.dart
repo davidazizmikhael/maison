@@ -581,4 +581,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sectionRecent => 'Recently filed';
+
+  @override
+  String get returnWindowReminder => 'Return window closes';
 }

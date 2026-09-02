@@ -583,4 +583,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get sectionRecent => 'Classés récemment';
+
+  @override
+  String get returnWindowReminder => 'La fenêtre de retour se termine';
 }
