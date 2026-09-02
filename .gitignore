@@ -50,3 +50,7 @@ supabase/.temp/
 screenshots/
 *.log
 env.json
+
+# Android release signing — NEVER commit; back these up somewhere safe.
+android/key.properties
+android/app/upload-keystore.jks
