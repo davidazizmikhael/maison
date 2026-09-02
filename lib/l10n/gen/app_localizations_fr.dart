@@ -624,4 +624,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String backupReadyBody(int count) {
     return '$count dossiers avec leurs photos, en JSON + CSV dans un ZIP. Enregistrez-le où vous voulez — il vous appartient.';
   }
+
+  @override
+  String get parseFailedTitle => 'Ça n\'a pas fonctionné';
+
+  @override
+  String get parseFailedBody =>
+      'La photo et votre note sont toujours là — vérifiez votre connexion et réessayez.';
+
+  @override
+  String get retryButton => 'Réessayer';
 }

@@ -24,7 +24,7 @@ Route<void> parsingRoute(CaptureMode mode, {String? noteText, Uint8List? imageBy
             noteText: noteText,
             imageBytes: imageBytes,
             returnReminderTitle: routeContext.l10n.returnWindowReminder),
-      child: ParsingScreen(mode: mode, imageBytes: imageBytes),
+      child: ParsingScreen(mode: mode, imageBytes: imageBytes, noteText: noteText),
     ),
   );
 }
@@ -402,9 +402,10 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
 /// The "AI is working" screen: animated step-by-step progress while the
 /// AddEntryCubit parses; moves to confirmation when both are done.
 class ParsingScreen extends StatefulWidget {
-  const ParsingScreen({super.key, required this.mode, this.imageBytes});
+  const ParsingScreen({super.key, required this.mode, this.imageBytes, this.noteText});
   final CaptureMode mode;
   final Uint8List? imageBytes;
+  final String? noteText;
 
   @override
   State<ParsingScreen> createState() => _ParsingScreenState();
@@ -428,11 +429,19 @@ class _ParsingScreenState extends State<ParsingScreen> {
   bool _animationDone = false;
   bool _navigated = false;
   int _step = 0;
+  String? _error;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    _startAnimation();
+  }
+
+  void _startAnimation() {
+    _timer?.cancel();
+    _step = 0;
+    _animationDone = false;
     _timer = Timer.periodic(const Duration(milliseconds: 800), (t) {
       if (_step < _stepCount[widget.mode]! - 1) {
         setState(() => _step++);
@@ -442,6 +451,18 @@ class _ParsingScreenState extends State<ParsingScreen> {
         _maybeFinish();
       }
     });
+  }
+
+  /// Re-run the same parse with the same capture — nothing is lost.
+  void _retry() {
+    setState(() => _error = null);
+    _startAnimation();
+    context.read<AddEntryCubit>().parse(
+          widget.mode,
+          noteText: widget.noteText,
+          imageBytes: widget.imageBytes,
+          returnReminderTitle: context.l10n.returnWindowReminder,
+        );
   }
 
   void _maybeFinish() {
@@ -475,11 +496,8 @@ class _ParsingScreenState extends State<ParsingScreen> {
           case AddEntryParsed():
             _maybeFinish();
           case AddEntryError(:final message):
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(message.contains('rate_limited') || message.contains('429')
-                    ? context.l10n.rateLimitedError
-                    : context.l10n.parseError(message))));
-            Navigator.of(context).pop();
+            _timer?.cancel();
+            setState(() => _error = message);
           case _:
             break;
         }
@@ -489,6 +507,8 @@ class _ParsingScreenState extends State<ParsingScreen> {
   }
 
   Widget _buildBody(BuildContext context) {
+    final error = _error;
+    if (error != null) return _buildError(context, error);
     return Scaffold(
       body: Center(
         child: Padding(
@@ -534,6 +554,42 @@ class _ParsingScreenState extends State<ParsingScreen> {
                   ),
                 );
               }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError(BuildContext context, String message) {
+    final rateLimited = message.contains('rate_limited') || message.contains('429');
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(36),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(Icons.cloud_off_outlined, size: 44, color: context.mc.inkSoft),
+              const SizedBox(height: 18),
+              Text(context.l10n.parseFailedTitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Text(
+                rateLimited ? context.l10n.rateLimitedError : context.l10n.parseFailedBody,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: context.mc.inkSoft, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              if (!rateLimited)
+                FilledButton(onPressed: _retry, child: Text(context.l10n.retryButton)),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(context.l10n.cancelButton,
+                    style: TextStyle(color: context.mc.inkSoft)),
+              ),
             ],
           ),
         ),

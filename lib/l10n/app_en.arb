@@ -320,5 +320,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "parseFailedTitle": "That didn't go through",
+  "parseFailedBody": "The photo and your note are still right here — check your connection and try again.",
+  "retryButton": "Try again"
 }

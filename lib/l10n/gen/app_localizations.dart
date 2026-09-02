@@ -1183,6 +1183,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} records with their photos, as JSON + CSV in one ZIP. Save it anywhere — it\'s yours.'**
   String backupReadyBody(int count);
+
+  /// No description provided for @parseFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t go through'**
+  String get parseFailedTitle;
+
+  /// No description provided for @parseFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The photo and your note are still right here — check your connection and try again.'**
+  String get parseFailedBody;
+
+  /// No description provided for @retryButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get retryButton;
 }
 
 class _AppLocalizationsDelegate

@@ -194,5 +194,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "parseFailedTitle": "Ça n'a pas fonctionné",
+  "parseFailedBody": "La photo et votre note sont toujours là — vérifiez votre connexion et réessayez.",
+  "retryButton": "Réessayer"
 }
