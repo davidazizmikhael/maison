@@ -302,5 +302,10 @@
   },
   "healthClear": "Nothing due. Enjoy the quiet.",
   "sectionRecent": "Recently filed",
-  "returnWindowReminder": "Return window closes"
+  "returnWindowReminder": "Return window closes",
+  "deleteAccountAction": "Delete account & data",
+  "deleteAccountTitle": "Delete everything?",
+  "deleteAccountBody": "This permanently deletes your account and every record, photo and reminder. There is no undo — export your documents first if you want a copy.",
+  "deleteAccountConfirm": "Delete everything",
+  "deleteAccountDoneSnack": "Account deleted"
 }

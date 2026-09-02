@@ -176,5 +176,10 @@
   },
   "healthClear": "Rien à l'horaire. Profitez du calme.",
   "sectionRecent": "Classés récemment",
-  "returnWindowReminder": "La fenêtre de retour se termine"
+  "returnWindowReminder": "La fenêtre de retour se termine",
+  "deleteAccountAction": "Supprimer le compte et les données",
+  "deleteAccountTitle": "Tout supprimer ?",
+  "deleteAccountBody": "Cette action supprime définitivement votre compte ainsi que tous vos dossiers, photos et rappels. Aucun retour en arrière — exportez d'abord vos documents si vous voulez une copie.",
+  "deleteAccountConfirm": "Tout supprimer",
+  "deleteAccountDoneSnack": "Compte supprimé"
 }

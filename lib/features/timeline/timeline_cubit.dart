@@ -52,6 +52,9 @@ class TimelineCubit extends Cubit<TimelineState> {
     _emitSynced(records, reminders);
   }
 
+  /// Account deletion: drop everything and cancel scheduled notifications.
+  void reset() => _emitSynced(const [], const []);
+
   /// Optimistic insert after a successful save.
   void addParsed(ParseResult result) {
     _emitSynced([result.record, ...state.records], [...state.reminders, ...result.reminders]);

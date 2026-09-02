@@ -586,4 +586,20 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get returnWindowReminder => 'La fenêtre de retour se termine';
+
+  @override
+  String get deleteAccountAction => 'Supprimer le compte et les données';
+
+  @override
+  String get deleteAccountTitle => 'Tout supprimer ?';
+
+  @override
+  String get deleteAccountBody =>
+      'Cette action supprime définitivement votre compte ainsi que tous vos dossiers, photos et rappels. Aucun retour en arrière — exportez d\'abord vos documents si vous voulez une copie.';
+
+  @override
+  String get deleteAccountConfirm => 'Tout supprimer';
+
+  @override
+  String get deleteAccountDoneSnack => 'Compte supprimé';
 }

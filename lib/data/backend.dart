@@ -65,6 +65,10 @@ abstract class Backend {
   /// Links the anonymous session to the user's Apple ID (native flow).
   /// Returns false if the user cancelled. Throws on real failures.
   Future<bool> linkWithApple();
+
+  /// Permanently deletes the account and every record, photo and reminder.
+  /// App Review requires this to be reachable in-app (guideline 5.1.1(v)).
+  Future<void> deleteAccount();
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId);
 
   static Backend get instance =>
@@ -120,6 +124,11 @@ class MockBackend implements Backend {
 
   @override
   Future<bool> linkWithApple() async => throw UnsupportedError('demo mode');
+
+  @override
+  Future<void> deleteAccount() async {
+    // Demo mode keeps no store of its own — the cubits reset their state.
+  }
 
   @override
   Future<(List<HomeRecord>, List<Reminder>)> fetchAll(String homeId) async =>
@@ -427,5 +436,18 @@ class SupabaseBackend implements Backend {
     const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
     return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    // The edge function wipes storage and deletes the auth user (rows cascade).
+    final response = await _db.functions.invoke('delete-account');
+    final body = response.data;
+    if (body is Map && body['error'] != null) {
+      throw Exception('${body['error']}');
+    }
+    // The server already revoked every session; drop the local one so the
+    // next start() signs in as a fresh anonymous user.
+    await _db.auth.signOut(scope: SignOutScope.local);
   }
 }

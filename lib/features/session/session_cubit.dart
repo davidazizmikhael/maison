@@ -79,4 +79,11 @@ class SessionCubit extends Cubit<SessionState> {
     }
     emit(SessionReady(homeId: homeId, address: address, profile: profile));
   }
+
+  /// Wipe the account and all its data; the caller restarts the app flow
+  /// (a fresh BootstrapScreen runs [start], which signs in anew).
+  Future<void> deleteAccount() async {
+    await _backend.deleteAccount();
+    emit(const SessionLoading());
+  }
 }

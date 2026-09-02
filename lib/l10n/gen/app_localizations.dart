@@ -1117,6 +1117,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Return window closes'**
   String get returnWindowReminder;
+
+  /// No description provided for @deleteAccountAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account & data'**
+  String get deleteAccountAction;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete everything?'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes your account and every record, photo and reminder. There is no undo — export your documents first if you want a copy.'**
+  String get deleteAccountBody;
+
+  /// No description provided for @deleteAccountConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete everything'**
+  String get deleteAccountConfirm;
+
+  /// No description provided for @deleteAccountDoneSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted'**
+  String get deleteAccountDoneSnack;
 }
 
 class _AppLocalizationsDelegate

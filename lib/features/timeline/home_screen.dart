@@ -53,12 +53,11 @@ class HomeScreen extends StatelessWidget {
           appBar: AppBar(
             toolbarHeight: 44,
             actions: [
-              if (BackendConfig.enabled)
-                IconButton(
-                  icon: Icon(Icons.person_outline, size: 22, color: context.mc.inkSoft),
-                  tooltip: context.l10n.accountTitle,
-                  onPressed: () => showAccountSheet(context),
-                ),
+              IconButton(
+                icon: Icon(Icons.person_outline, size: 22, color: context.mc.inkSoft),
+                tooltip: context.l10n.accountTitle,
+                onPressed: () => showAccountSheet(context),
+              ),
               IconButton(
                 icon: Icon(Icons.language, size: 22, color: context.mc.inkSoft),
                 tooltip: context.l10n.languageTitle,

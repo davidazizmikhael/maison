@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../core/l10n_ext.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
+import '../timeline/timeline_cubit.dart';
+import 'bootstrap_screen.dart';
+import 'session_cubit.dart';
 
-/// Account state + Sign in with Apple linking (live mode only).
+/// Account state, Sign in with Apple linking, and account deletion.
 void showAccountSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
@@ -25,6 +29,49 @@ class _AccountSheet extends StatefulWidget {
 
 class _AccountSheetState extends State<_AccountSheet> {
   bool _linking = false;
+  bool _deleting = false;
+
+  Future<void> _deleteAccount() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.deleteAccountTitle),
+        content: Text(l10n.deleteAccountBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancelButton),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.deleteAccountConfirm,
+                style: TextStyle(color: dialogContext.mc.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _deleting = true);
+    try {
+      await context.read<SessionCubit>().deleteAccount();
+      if (!mounted) return;
+      context.read<TimelineCubit>().reset(); // also cancels scheduled notifications
+      // Restart the whole flow: a fresh bootstrap signs in anew → onboarding.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const BootstrapScreen()),
+        (route) => false,
+      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.deleteAccountDoneSnack)));
+    } catch (e) {
+      if (mounted) {
+        setState(() => _deleting = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.saveError('$e'))));
+      }
+    }
+  }
 
   Future<void> _link() async {
     setState(() => _linking = true);
@@ -104,7 +151,7 @@ class _AccountSheetState extends State<_AccountSheet> {
                 ],
               ),
             ),
-            if (!linked) ...[
+            if (!linked && BackendConfig.enabled) ...[
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -123,6 +170,28 @@ class _AccountSheetState extends State<_AccountSheet> {
                       ),
               ),
             ],
+            const SizedBox(height: 18),
+            Container(height: 1, color: context.mc.line),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: _deleting
+                  ? const Center(
+                      child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5)))
+                  : TextButton.icon(
+                      onPressed: _deleteAccount,
+                      style: TextButton.styleFrom(
+                          foregroundColor: context.mc.red,
+                          alignment: Alignment.centerLeft),
+                      icon: const Icon(Icons.delete_forever_outlined, size: 20),
+                      label: Text(context.l10n.deleteAccountAction,
+                          style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+                    ),
+            ),
           ],
         ),
       ),

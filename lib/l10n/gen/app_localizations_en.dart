@@ -584,4 +584,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get returnWindowReminder => 'Return window closes';
+
+  @override
+  String get deleteAccountAction => 'Delete account & data';
+
+  @override
+  String get deleteAccountTitle => 'Delete everything?';
+
+  @override
+  String get deleteAccountBody =>
+      'This permanently deletes your account and every record, photo and reminder. There is no undo — export your documents first if you want a copy.';
+
+  @override
+  String get deleteAccountConfirm => 'Delete everything';
+
+  @override
+  String get deleteAccountDoneSnack => 'Account deleted';
 }

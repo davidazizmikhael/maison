@@ -215,5 +215,20 @@ void main() {
     await tester.pumpAndSettle();
     final lightCtx = tester.element(find.byType(Scaffold).first);
     expect(Theme.of(lightCtx).brightness, Brightness.light);
+
+    // 11 — Account deletion: wipes the data, cancels notifications, and
+    // returns the app to onboarding (App Review guideline 5.1.1(v)).
+    await tester.tap(find.byIcon(Icons.person_outline));
+    await tester.pumpAndSettle();
+    await shot(tester, '18-account-sheet');
+    await tester.tap(find.text('Delete account & data'));
+    await tester.pumpAndSettle();
+    await shot(tester, '18b-delete-account-confirm');
+    await tester.tap(find.text('Delete everything'));
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.textContaining('Snap it.')); // onboarding again
+    final afterDelete = await tester.runAsync(() => NotificationService.pending());
+    expect(afterDelete!, isEmpty, reason: 'deletion must cancel scheduled notifications');
+    await shot(tester, '19-onboarding-after-delete');
   });
 }
