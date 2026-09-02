@@ -475,8 +475,10 @@ class _ParsingScreenState extends State<ParsingScreen> {
           case AddEntryParsed():
             _maybeFinish();
           case AddEntryError(:final message):
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(context.l10n.parseError(message))));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(message.contains('rate_limited') || message.contains('429')
+                    ? context.l10n.rateLimitedError
+                    : context.l10n.parseError(message))));
             Navigator.of(context).pop();
           case _:
             break;

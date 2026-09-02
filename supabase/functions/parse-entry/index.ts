@@ -5,6 +5,7 @@
 // Deploy:  supabase functions deploy parse-entry
 // Secrets: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 
+import { createClient } from "npm:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { z } from "npm:zod@3";
 import { zodOutputFormat } from "npm:@anthropic-ai/sdk/helpers/zod";
@@ -120,6 +121,32 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "mode plus text or image_base64 required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Who is calling? Resolve from the JWT — and cap parses per user per day
+    // so a single client can't run up the AI bill.
+    const supaUrl = Deno.env.get("SUPABASE_URL")!;
+    const asCaller = createClient(supaUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
+    });
+    const { data: userData } = await asCaller.auth.getUser();
+    if (!userData?.user) {
+      return new Response(JSON.stringify({ error: "not authenticated" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const DAILY_LIMIT = 50;
+    const admin = createClient(supaUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: usedToday, error: usageError } = await admin.rpc("increment_parse_usage", {
+      uid: userData.user.id,
+      on_day: new Date().toISOString().slice(0, 10),
+    });
+    if (!usageError && typeof usedToday === "number" && usedToday > DAILY_LIMIT) {
+      return new Response(JSON.stringify({ error: "rate_limited" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");

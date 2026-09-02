@@ -600,4 +600,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteAccountDoneSnack => 'Account deleted';
+
+  @override
+  String get rateLimitedError =>
+      'You\'ve hit today\'s AI limit. It resets tomorrow — your photo stays on your phone in the meantime.';
 }

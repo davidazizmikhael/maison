@@ -181,5 +181,6 @@
   "deleteAccountTitle": "Tout supprimer ?",
   "deleteAccountBody": "Cette action supprime définitivement votre compte ainsi que tous vos dossiers, photos et rappels. Aucun retour en arrière — exportez d'abord vos documents si vous voulez une copie.",
   "deleteAccountConfirm": "Tout supprimer",
-  "deleteAccountDoneSnack": "Compte supprimé"
+  "deleteAccountDoneSnack": "Compte supprimé",
+  "rateLimitedError": "Vous avez atteint la limite quotidienne d'IA. Elle se réinitialise demain — votre photo reste sur votre téléphone d'ici là."
 }

@@ -602,4 +602,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deleteAccountDoneSnack => 'Compte supprimé';
+
+  @override
+  String get rateLimitedError =>
+      'Vous avez atteint la limite quotidienne d\'IA. Elle se réinitialise demain — votre photo reste sur votre téléphone d\'ici là.';
 }

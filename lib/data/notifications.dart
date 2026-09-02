@@ -18,7 +18,7 @@ class NotificationService {
   /// The local hour reminders fire at.
   static const _fireHour = 9;
 
-  static Future<void> init() async {
+  static Future<void> init({void Function()? onTap}) async {
     tz.initializeTimeZones();
     try {
       final info = await FlutterTimezone.getLocalTimezone();
@@ -36,6 +36,7 @@ class NotificationService {
         ),
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
+      onDidReceiveNotificationResponse: (_) => onTap?.call(),
     );
     _ready = true;
   }

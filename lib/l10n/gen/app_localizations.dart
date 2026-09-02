@@ -1147,6 +1147,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account deleted'**
   String get deleteAccountDoneSnack;
+
+  /// No description provided for @rateLimitedError.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve hit today\'s AI limit. It resets tomorrow — your photo stays on your phone in the meantime.'**
+  String get rateLimitedError;
 }
 
 class _AppLocalizationsDelegate

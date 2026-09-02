@@ -307,5 +307,6 @@
   "deleteAccountTitle": "Delete everything?",
   "deleteAccountBody": "This permanently deletes your account and every record, photo and reminder. There is no undo — export your documents first if you want a copy.",
   "deleteAccountConfirm": "Delete everything",
-  "deleteAccountDoneSnack": "Account deleted"
+  "deleteAccountDoneSnack": "Account deleted",
+  "rateLimitedError": "You've hit today's AI limit. It resets tomorrow — your photo stays on your phone in the meantime."
 }
