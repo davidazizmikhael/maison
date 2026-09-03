@@ -7,7 +7,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk";
-import { z } from "npm:zod@3";
+import { z } from "npm:zod@4";
 import { zodOutputFormat } from "npm:@anthropic-ai/sdk/helpers/zod";
 
 const MODEL = Deno.env.get("PARSE_MODEL") ?? "claude-opus-5";
@@ -197,6 +197,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
+      console.error("anthropic error", err.status, err.message); // server logs only
       return new Response(
         JSON.stringify({ error: `AI service error (${err.status})` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
