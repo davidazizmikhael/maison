@@ -64,9 +64,8 @@ class _EditRecordScreenState extends State<EditRecordScreen> {
     setState(() => _saving = true);
     final session = context.read<SessionCubit>().state;
     final homeId = session is SessionReady ? session.homeId : null;
-    await context
-        .read<TimelineCubit>()
-        .updateRecord(widget.record, _updated(), homeId: homeId);
+    await context.read<TimelineCubit>().updateRecord(widget.record, _updated(),
+        homeId: homeId, returnReminderTitle: context.l10n.returnWindowReminder);
     if (!mounted) return;
     final snack = context.l10n.savedCorrectionsSnack;
     Navigator.of(context).popUntil((route) => route.isFirst);

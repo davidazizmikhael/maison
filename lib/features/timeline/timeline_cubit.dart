@@ -73,14 +73,24 @@ class TimelineCubit extends Cubit<TimelineState> {
     }
   }
 
-  Future<void> updateRecord(HomeRecord original, HomeRecord updated, {String? homeId}) async {
+  Future<void> updateRecord(HomeRecord original, HomeRecord updated,
+      {String? homeId, String? returnReminderTitle}) async {
     await _backend.updateRecord(updated);
+    // A return date set after save still earns its reminder (same coverage
+    // rules as the parse-time safety net).
+    Reminder? extra;
+    if (returnReminderTitle != null) {
+      extra = returnReminderFor(updated, state.reminders, returnReminderTitle);
+    }
     if (BackendConfig.enabled && homeId != null) {
-      await load(homeId);
+      if (extra != null) {
+        await _backend.addReminder(homeId, extra, recordId: updated.id);
+      }
+      await load(homeId); // picks up the new reminder and reschedules
     } else {
       _emitSynced(
         [for (final r in state.records) identical(r, original) ? updated : r],
-        state.reminders,
+        [...state.reminders, ?extra],
       );
     }
   }

@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maison/data/backend.dart';
 import 'package:maison/data/models.dart';
+import 'package:maison/features/timeline/timeline_cubit.dart';
 
 ParseResult _result({DateTime? returnBy, List<Reminder> reminders = const []}) {
   return ParseResult(
@@ -58,6 +60,29 @@ void main() {
           now: today);
       expect(r.reminders, hasLength(1));
       expect(r.reminders.single.title, 'Return the shoes');
+    });
+
+    test('editing a saved record to add a return date spawns the reminder', () async {
+      final cubit = TimelineCubit(MockBackend());
+      final saved = _result().record; // no return date yet
+      cubit.addParsed(ParseResult(record: saved, reminders: const [], steps: const []));
+      expect(cubit.state.reminders, isEmpty);
+
+      final edited = HomeRecord(
+        kind: saved.kind,
+        title: saved.title,
+        subtitle: saved.subtitle,
+        room: saved.room,
+        returnBy: DateTime.now().add(const Duration(days: 30)),
+      );
+      await cubit.updateRecord(saved, edited, returnReminderTitle: 'Return window closes');
+      expect(cubit.state.reminders, hasLength(1));
+      expect(cubit.state.reminders.single.title, 'Return window closes');
+
+      // Editing again with the same date must not duplicate the reminder.
+      await cubit.updateRecord(edited, edited, returnReminderTitle: 'Return window closes');
+      expect(cubit.state.reminders, hasLength(1));
+      await cubit.close();
     });
 
     test('an unrelated far-off reminder does not count as coverage', () {

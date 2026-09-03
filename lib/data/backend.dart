@@ -56,6 +56,9 @@ abstract class Backend {
   /// Persists user edits to an existing record.
   Future<void> updateRecord(HomeRecord record);
 
+  /// Creates a standalone reminder (e.g. a return window set after save).
+  Future<Reminder> addReminder(String homeId, Reminder reminder, {String? recordId});
+
   Future<void> completeReminder(String reminderId);
   Future<void> snoozeReminder(String reminderId, DateTime newDue);
 
@@ -112,6 +115,10 @@ class MockBackend implements Backend {
 
   @override
   Future<void> updateRecord(HomeRecord record) async {}
+
+  @override
+  Future<Reminder> addReminder(String homeId, Reminder reminder, {String? recordId}) async =>
+      reminder; // demo mode: the TimelineCubit owns the state
 
   @override
   Future<void> completeReminder(String reminderId) async {}
@@ -341,6 +348,30 @@ class SupabaseBackend implements Backend {
       'warranty_until': record.warrantyUntil?.toIso8601String().substring(0, 10),
       'return_by': record.returnBy?.toIso8601String().substring(0, 10),
     }).eq('id', id);
+  }
+
+  @override
+  Future<Reminder> addReminder(String homeId, Reminder reminder, {String? recordId}) async {
+    final row = await _db
+        .from('reminders')
+        .insert({
+          'home_id': homeId,
+          'owner_id': _db.auth.currentUser!.id,
+          'record_id': recordId,
+          'title': reminder.title,
+          'detail': reminder.detail,
+          'due_on': reminder.due.toIso8601String().substring(0, 10),
+          'seasonal': reminder.seasonal,
+        })
+        .select('id')
+        .single();
+    return Reminder(
+      id: row['id'] as String,
+      title: reminder.title,
+      detail: reminder.detail,
+      due: reminder.due,
+      seasonal: reminder.seasonal,
+    );
   }
 
   @override
