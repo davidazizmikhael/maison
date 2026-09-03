@@ -130,21 +130,26 @@ async function parseWithGemini(
       ? `Note from the homeowner: "${text}"`
       : "Extract the record from this image.",
   });
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-    {
-      method: "POST",
-      headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: instruction }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: geminiSchema,
-        },
-      }),
-    },
-  );
+  const request = {
+    method: "POST",
+    headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: instruction }] },
+      contents: [{ role: "user", parts }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: geminiSchema,
+      },
+    }),
+  };
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  let res = await fetch(url, request);
+  if (res.status === 503) {
+    // Free-tier demand spikes are transient — one retry usually clears them.
+    await new Promise((r) => setTimeout(r, 1500));
+    res = await fetch(url, request);
+  }
   if (!res.ok) {
     const body = await res.text();
     console.error("gemini error", res.status, body.slice(0, 500));
