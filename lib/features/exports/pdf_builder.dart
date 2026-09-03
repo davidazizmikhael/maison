@@ -82,6 +82,8 @@ Future<Uint8List> buildClaimPack({
       if (record.warrantyUntil != null)
         _row(l10n.labelWarranty, l10n.warrantyUntil(_fmtDate(record.warrantyUntil!))),
       if (record.returnBy != null) _row(l10n.labelReturnBy, _fmtDate(record.returnBy!)),
+      if (record.vendorPhone != null) _row(l10n.labelPhone, record.vendorPhone!),
+      if (record.vendorEmail != null) _row(l10n.labelEmail, record.vendorEmail!),
       if (record.rawInput != null) _row('Source', record.rawInput!.replaceAll('📸', '').trim()),
       if (photo != null) ...[
         pw.SizedBox(height: 14),

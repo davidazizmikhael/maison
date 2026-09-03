@@ -31,6 +31,11 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>mailto</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Maison uses the camera to snap appliance nameplates and receipts so AI can file them for you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

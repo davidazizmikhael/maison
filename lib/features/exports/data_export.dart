@@ -52,6 +52,9 @@ Uint8List buildBackupZip({
           'room': r.room,
           'cost': r.cost,
           'vendor': r.vendor,
+          'vendor_domain': r.vendorDomain,
+          'vendor_phone': r.vendorPhone,
+          'vendor_email': r.vendorEmail,
           'model_serial': r.modelSerial,
           'warranty_until': r.warrantyUntil == null ? null : iso(r.warrantyUntil),
           'return_by': r.returnBy == null ? null : iso(r.returnBy),
@@ -78,7 +81,7 @@ Uint8List buildBackupZip({
   }
 
   final csv = StringBuffer(
-      'title,kind,room,cost,vendor,model_serial,warranty_until,return_by,added_on,photo\n');
+      'title,kind,room,cost,vendor,vendor_phone,vendor_email,model_serial,warranty_until,return_by,added_on,photo\n');
   for (final r in records) {
     csv.writeln([
       r.title,
@@ -86,6 +89,8 @@ Uint8List buildBackupZip({
       r.room,
       r.cost,
       r.vendor,
+      r.vendorPhone,
+      r.vendorEmail,
       r.modelSerial,
       iso(r.warrantyUntil),
       iso(r.returnBy),

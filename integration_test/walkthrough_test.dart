@@ -110,6 +110,8 @@ void main() {
     await tester.tap(find.text('Furnace — Lennox ML296V'));
     await tester.pumpAndSettle();
     await waitFor(tester, find.text('View manual'));
+    // Vendor contact extracted from the nameplate (tap-to-call row)
+    expect(find.text('1-800-953-6669'), findsOneWidget);
     await shot(tester, '10-record-detail');
 
     // 5a — Export the claim pack straight from the record

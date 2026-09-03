@@ -20,6 +20,9 @@ const ParsedEntry = z.object({
   room: z.string(),
   cost: z.number().nullable(),
   vendor: z.string().nullable(),
+  vendor_domain: z.string().nullable(), // primary web domain, e.g. "canadiantire.ca"
+  vendor_phone: z.string().nullable(),
+  vendor_email: z.string().nullable(),
   model_serial: z.string().nullable(),
   warranty_until: z.string().nullable(), // ISO date
   return_by: z.string().nullable(), // ISO date
@@ -51,7 +54,8 @@ function fallbackParse(mode: string, text: string | undefined, today: Date) {
       record: {
         kind: "appliance", title: "Furnace — Lennox ML296V",
         subtitle: "High-efficiency gas furnace (demo parse)", room: "Basement",
-        cost: null, vendor: null, model_serial: "S/N 5919C04532",
+        cost: null, vendor: null, vendor_domain: "lennox.com",
+        vendor_phone: "1-800-953-6669", vendor_email: null, model_serial: "S/N 5919C04532",
         warranty_until: plusDays(3 * 365), return_by: null, confidence: "low",
       },
       reminders: [{
@@ -63,7 +67,8 @@ function fallbackParse(mode: string, text: string | undefined, today: Date) {
       record: {
         kind: "receipt", title: "Snow blower — Toro Power Max 826",
         subtitle: "From receipt (demo parse)", room: "Garage",
-        cost: 1699.99, vendor: "Canadian Tire", model_serial: null,
+        cost: 1699.99, vendor: "Canadian Tire", vendor_domain: "canadiantire.ca",
+        vendor_phone: "1-800-387-8803", vendor_email: null, model_serial: null,
         warranty_until: plusDays(3 * 365), return_by: plusDays(90), confidence: "low",
       },
       reminders: [],
@@ -73,8 +78,8 @@ function fallbackParse(mode: string, text: string | undefined, today: Date) {
         kind: "service", title: text?.slice(0, 60) || "Home repair",
         subtitle: "Typed note (demo parse)", room: "Home",
         cost: Number(text?.match(/\$?\s?(\d[\d,]*(?:\.\d{1,2})?)/)?.[1]?.replaceAll(",", "")) || null,
-        vendor: null, model_serial: null,
-        warranty_until: null, return_by: null, confidence: "low",
+        vendor: null, vendor_domain: null, vendor_phone: null, vendor_email: null,
+        model_serial: null, warranty_until: null, return_by: null, confidence: "low",
       },
       reminders: [],
     },
@@ -92,6 +97,9 @@ const geminiSchema = {
     room: { type: "STRING" },
     cost: { type: "NUMBER", nullable: true },
     vendor: { type: "STRING", nullable: true },
+    vendor_domain: { type: "STRING", nullable: true },
+    vendor_phone: { type: "STRING", nullable: true },
+    vendor_email: { type: "STRING", nullable: true },
     model_serial: { type: "STRING", nullable: true },
     warranty_until: { type: "STRING", nullable: true },
     return_by: { type: "STRING", nullable: true },
@@ -110,8 +118,9 @@ const geminiSchema = {
       },
     },
   },
-  required: ["kind", "title", "subtitle", "room", "cost", "vendor", "model_serial",
-    "warranty_until", "return_by", "confidence", "reminders"],
+  required: ["kind", "title", "subtitle", "room", "cost", "vendor", "vendor_domain",
+    "vendor_phone", "vendor_email", "model_serial", "warranty_until", "return_by",
+    "confidence", "reminders"],
 };
 
 async function parseWithGemini(
@@ -171,7 +180,11 @@ function instructionFor(mode: string, today: string): string {
     `You extract structured home-maintenance records for the Maison app. Today is ${today}. ` +
     `Return dates as ISO (YYYY-MM-DD). Use null when a field is not present — never invent values. ` +
     `Set confidence to "low" when the input is blurry or ambiguous. ` +
-    `Suggest 0-2 maintenance reminders only when the item genuinely has a recurring task or deadline.`;
+    `Suggest 0-2 maintenance reminders only when the item genuinely has a recurring task or deadline. ` +
+    `Vendor contact: if a phone number, email or website is printed on the input, extract it into ` +
+    `vendor_phone / vendor_email / vendor_domain (domain only, e.g. "canadiantire.ca"). For a well-known ` +
+    `retailer or manufacturer you may fill vendor_domain from knowledge, and vendor_phone ONLY when you are ` +
+    `certain of its widely published customer-service number — NEVER guess digits or invent an email; use null.`;
   switch (mode) {
     case "nameplate":
       return `${base} The image is an appliance nameplate / rating plate. ` +

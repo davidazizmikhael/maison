@@ -632,4 +632,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retryButton => 'Try again';
+
+  @override
+  String get labelPhone => 'Phone';
+
+  @override
+  String get labelEmail => 'Email';
 }

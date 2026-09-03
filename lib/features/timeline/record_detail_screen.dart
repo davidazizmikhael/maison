@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/photo_viewer.dart';
 import '../../core/theme.dart';
@@ -80,6 +81,30 @@ class RecordDetailScreen extends StatelessWidget {
         .showSnackBar(SnackBar(content: Text(snack), duration: const Duration(seconds: 2)));
   }
 
+  Widget _contactRow(BuildContext context, IconData icon, String label, String value,
+      {required Uri uri}) {
+    return InkWell(
+      onTap: () => launchUrl(uri),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(children: [
+          SizedBox(
+              width: 82,
+              child: Text(label, style: TextStyle(fontSize: 13, color: context.mc.inkSoft))),
+          Icon(icon, size: 15, color: context.mc.accentDeep),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(value,
+                style: TextStyle(
+                    fontSize: 15,
+                    color: context.mc.accentDeep,
+                    fontWeight: FontWeight.w600)),
+          ),
+        ]),
+      ),
+    );
+  }
+
   Widget _kv(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -150,7 +175,37 @@ class RecordDetailScreen extends StatelessWidget {
           _kv(context, context.l10n.labelRoom, record.room),
           if (record.cost != null)
             _kv(context, context.l10n.labelCost, '\$${record.cost!.toStringAsFixed(2)}'),
-          if (record.vendor != null) _kv(context, context.l10n.labelVendor, record.vendor!),
+          if (record.vendor != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SizedBox(
+                    width: 82,
+                    child: Text(context.l10n.labelVendor,
+                        style: TextStyle(fontSize: 13, color: context.mc.inkSoft))),
+                if (record.vendorDomain != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.network(
+                      // Free, key-less favicon service — the store's icon.
+                      'https://www.google.com/s2/favicons?domain=${record.vendorDomain}&sz=64',
+                      width: 18,
+                      height: 18,
+                      errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                ],
+                Expanded(child: Text(record.vendor!, style: const TextStyle(fontSize: 15))),
+              ]),
+            ),
+          if (record.vendorPhone != null)
+            _contactRow(context, Icons.phone_outlined, context.l10n.labelPhone,
+                record.vendorPhone!,
+                uri: Uri(scheme: 'tel', path: record.vendorPhone!.replaceAll(RegExp(r'[^0-9+]'), ''))),
+          if (record.vendorEmail != null)
+            _contactRow(context, Icons.mail_outline, context.l10n.labelEmail,
+                record.vendorEmail!, uri: Uri(scheme: 'mailto', path: record.vendorEmail!)),
           if (record.modelSerial != null)
             _kv(context, context.l10n.labelSerial, record.modelSerial!),
           if (record.photoPath != null) ...[

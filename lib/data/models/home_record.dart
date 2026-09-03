@@ -10,6 +10,9 @@ class HomeRecord {
     required this.room,
     this.cost,
     this.vendor,
+    this.vendorDomain,
+    this.vendorPhone,
+    this.vendorEmail,
     this.modelSerial,
     this.warrantyUntil,
     this.returnBy,
@@ -28,6 +31,12 @@ class HomeRecord {
   final String room;
   final double? cost;
   final String? vendor;
+
+  /// The vendor's primary web domain (e.g. "sportsexperts.ca") — used to
+  /// render the store icon via a favicon service, no API key needed.
+  final String? vendorDomain;
+  final String? vendorPhone;
+  final String? vendorEmail;
   final String? modelSerial;
   final DateTime? warrantyUntil;
   final DateTime? returnBy;
@@ -46,6 +55,9 @@ class HomeRecord {
         room: room,
         cost: cost,
         vendor: vendor,
+        vendorDomain: vendorDomain,
+        vendorPhone: vendorPhone,
+        vendorEmail: vendorEmail,
         modelSerial: modelSerial,
         warrantyUntil: warrantyUntil,
         returnBy: returnBy,
