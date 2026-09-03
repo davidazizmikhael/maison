@@ -11,6 +11,7 @@ import { z } from "npm:zod@4";
 import { zodOutputFormat } from "npm:@anthropic-ai/sdk/helpers/zod";
 
 const MODEL = Deno.env.get("PARSE_MODEL") ?? "claude-opus-5";
+const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
 
 const ParsedEntry = z.object({
   kind: z.enum(["appliance", "receipt", "service"]),
@@ -81,6 +82,85 @@ function fallbackParse(mode: string, text: string | undefined, today: Date) {
   return base[(mode as keyof typeof base)] ?? base.note;
 }
 
+// Gemini's responseSchema is an OpenAPI subset — mirror of ParsedEntry above.
+const geminiSchema = {
+  type: "OBJECT",
+  properties: {
+    kind: { type: "STRING", enum: ["appliance", "receipt", "service"] },
+    title: { type: "STRING" },
+    subtitle: { type: "STRING" },
+    room: { type: "STRING" },
+    cost: { type: "NUMBER", nullable: true },
+    vendor: { type: "STRING", nullable: true },
+    model_serial: { type: "STRING", nullable: true },
+    warranty_until: { type: "STRING", nullable: true },
+    return_by: { type: "STRING", nullable: true },
+    confidence: { type: "STRING", enum: ["high", "medium", "low"] },
+    reminders: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING" },
+          detail: { type: "STRING" },
+          due_on: { type: "STRING" },
+          seasonal: { type: "BOOLEAN" },
+        },
+        required: ["title", "detail", "due_on", "seasonal"],
+      },
+    },
+  },
+  required: ["kind", "title", "subtitle", "room", "cost", "vendor", "model_serial",
+    "warranty_until", "return_by", "confidence", "reminders"],
+};
+
+async function parseWithGemini(
+  apiKey: string,
+  instruction: string,
+  text: string | undefined,
+  imageBase64: string | undefined,
+  mediaType: string,
+): Promise<z.infer<typeof ParsedEntry>> {
+  const parts: Record<string, unknown>[] = [];
+  if (imageBase64) {
+    parts.push({ inline_data: { mime_type: mediaType, data: imageBase64 } });
+  }
+  parts.push({
+    text: text && !imageBase64
+      ? `Note from the homeowner: "${text}"`
+      : "Extract the record from this image.",
+  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: instruction }] },
+        contents: [{ role: "user", parts }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: geminiSchema,
+        },
+      }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("gemini error", res.status, body.slice(0, 500));
+    throw { gemini: true, status: res.status };
+  }
+  const data = await res.json();
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw { gemini: true, status: 502 };
+  const validated = ParsedEntry.safeParse(JSON.parse(raw));
+  if (!validated.success) {
+    console.error("gemini schema mismatch", validated.error.message.slice(0, 300));
+    throw { gemini: true, status: 502 };
+  }
+  return validated.data;
+}
+
 function instructionFor(mode: string, today: string): string {
   const base =
     `You extract structured home-maintenance records for the Maison app. Today is ${today}. ` +
@@ -149,17 +229,45 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!apiKey) {
+    // Provider: Gemini when its key exists (free tier — good for demos),
+    // Anthropic otherwise; deterministic fallback when neither is set.
+    // Override with PARSE_PROVIDER=gemini|anthropic.
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const provider = Deno.env.get("PARSE_PROVIDER") ??
+      (geminiKey ? "gemini" : anthropicKey ? "anthropic" : "none");
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (provider === "none" || (provider === "gemini" && !geminiKey) ||
+        (provider === "anthropic" && !anthropicKey)) {
       const demo = fallbackParse(mode, text, new Date());
       return new Response(JSON.stringify({ ...demo, demo: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const client = new Anthropic({ apiKey });
+    if (provider === "gemini") {
+      try {
+        const parsed = await parseWithGemini(
+          geminiKey!, instructionFor(mode, today), text, image_base64,
+          media_type ?? "image/jpeg");
+        const { reminders, ...record } = parsed;
+        return new Response(JSON.stringify({ record, reminders }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        const status = (err as { status?: number }).status ?? 500;
+        // Free-tier RPM/RPD limits surface as 429 — the app shows the
+        // friendly rate message rather than a raw error.
+        return new Response(
+          JSON.stringify({ error: status === 429 ? "rate_limited" : `AI service error (${status})` }),
+          { status: status === 429 ? 429 : 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const client = new Anthropic({ apiKey: anthropicKey! });
     const content: Anthropic.ContentBlockParam[] = [];
     if (image_base64) {
       content.push({

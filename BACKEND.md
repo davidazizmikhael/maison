@@ -46,8 +46,20 @@ what you've been testing). With credentials it switches to the real backend.
    Anonymous) — v1 uses frictionless anonymous auth, upgradeable to
    Apple/email later without losing data.
 
-4. **Set the AI provider key and deploy the function** (get a key from
-   the provider's console):
+4. **Set an AI key and deploy the function.** Two providers are supported;
+   the function picks Gemini when its key exists, the paid provider otherwise
+   (override with the `PARSE_PROVIDER` secret):
+
+   Free for demos — Gemini (aistudio.google.com → Get API key; ~10 req/min,
+   ~1,500/day; note: Google may use free-tier data to improve its models —
+   move to paid or revisit the privacy policy before real users):
+
+   ```bash
+   supabase secrets set GEMINI_API_KEY=your-key
+   ```
+
+   Paid provider (minimum credits apply; models via
+   `PARSE_MODEL`, Gemini's via `GEMINI_MODEL`):
 
    ```bash
    supabase secrets set ANTHROPIC_API_KEY=sk-ant-your-key
