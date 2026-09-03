@@ -25,6 +25,7 @@ class _EditRecordScreenState extends State<EditRecordScreen> {
   late final TextEditingController _vendor =
       TextEditingController(text: widget.record.vendor ?? '');
   late DateTime? _warrantyUntil = widget.record.warrantyUntil;
+  late DateTime? _returnBy = widget.record.returnBy;
   bool _saving = false;
 
   @override
@@ -51,7 +52,7 @@ class _EditRecordScreenState extends State<EditRecordScreen> {
       vendorEmail: o.vendorEmail,
       modelSerial: o.modelSerial,
       warrantyUntil: _warrantyUntil,
-      returnBy: o.returnBy,
+      returnBy: _returnBy,
       manualFound: o.manualFound,
       rawInput: o.rawInput,
       photoPath: o.photoPath,
@@ -83,6 +84,18 @@ class _EditRecordScreenState extends State<EditRecordScreen> {
       helpText: context.l10n.labelWarranty,
     );
     if (picked != null) setState(() => _warrantyUntil = picked);
+  }
+
+  Future<void> _pickReturnDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _returnBy ?? now.add(const Duration(days: 30)),
+      firstDate: DateTime(now.year - 2),
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: context.l10n.labelReturnBy,
+    );
+    if (picked != null) setState(() => _returnBy = picked);
   }
 
   Future<void> _pickRoom() async {
@@ -238,6 +251,11 @@ class _EditRecordScreenState extends State<EditRecordScreen> {
                         : context.l10n.tapToSet,
                     key: const Key('warranty-edit'),
                     onTap: _pickWarrantyDate),
+                _pickRow(
+                    context.l10n.labelReturnBy,
+                    _returnBy != null ? _fmtDate(_returnBy!) : context.l10n.tapToSet,
+                    key: const Key('return-edit'),
+                    onTap: _pickReturnDate),
               ],
             ),
           ),

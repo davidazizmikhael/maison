@@ -1213,6 +1213,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Email'**
   String get labelEmail;
+
+  /// No description provided for @lowConfidenceBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'I couldn\'t read everything clearly — worth double-checking the details below.'**
+  String get lowConfidenceBanner;
 }
 
 class _AppLocalizationsDelegate

@@ -6,10 +6,15 @@ enum CaptureMode { nameplate, receipt, note }
 
 /// A structured result from the AI (or its demo stand-in).
 class ParseResult {
-  ParseResult({required this.record, required this.reminders, required this.steps});
+  ParseResult(
+      {required this.record, required this.reminders, required this.steps, this.confidence});
   final HomeRecord record;
   final List<Reminder> reminders;
   final List<String> steps;
+
+  /// The AI's own certainty ("high" | "medium" | "low") — low means the input
+  /// was blurry/ambiguous and the confirm screen shows a double-check hint.
+  final String? confidence;
 }
 
 /// Safety net for return windows: when the record carries a return-by date
@@ -34,5 +39,6 @@ ParseResult ensureReturnReminder(ParseResult result, String title, {DateTime? no
       Reminder(title: title, detail: result.record.title, due: due),
     ],
     steps: result.steps,
+    confidence: result.confidence,
   );
 }

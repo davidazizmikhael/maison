@@ -95,10 +95,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
+    // Return-by is manually settable too — saving must spawn the reminder
+    await tester.ensureVisible(find.byKey(const Key('return-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('return-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save my corrections'));
     await tester.pumpAndSettle();
     // Saving hits the database in live mode — wait for the journal to return.
     await waitFor(tester, find.text('Furnace — Lennox ML296V'));
+    // The hand-set return date produced its reminder via the safety net
+    expect(find.text('Return window closes'), findsOneWidget);
     await shot(tester, '09-home-after-save');
 
     // 5 — Record detail (the rail can sit below the fold — scroll to it, and
@@ -164,6 +173,8 @@ void main() {
     expect(find.text('Bathroom faucet repair'), findsNothing);
 
     // 6c — Complete a reminder from the Up next checklist
+    await tester.ensureVisible(find.text('Furnace filter due'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Furnace filter due'));
     await tester.pumpAndSettle();
     await shot(tester, '12c-reminder-actions');
@@ -201,7 +212,10 @@ void main() {
     expect(pending!, isNotEmpty, reason: 'reminders should schedule local notifications');
     expect(pending.map((p) => p.title), contains('Replace furnace filter'));
 
-    // 9 — Language: switch to French, verify, switch back to English
+    // 9 — Language: switch to French, verify, switch back to English.
+    // Scroll home back to top first — the section labels build lazily.
+    await tester.fling(find.byType(ListView).first, const Offset(0, 800), 2000);
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.language));
     await tester.pumpAndSettle();
     await shot(tester, '15-language-sheet');

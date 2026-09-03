@@ -640,4 +640,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get labelEmail => 'Courriel';
+
+  @override
+  String get lowConfidenceBanner =>
+      'Je n\'ai pas tout lu clairement — vérifiez les détails ci-dessous.';
 }

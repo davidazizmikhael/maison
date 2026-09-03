@@ -325,5 +325,6 @@
   "parseFailedBody": "The photo and your note are still right here — check your connection and try again.",
   "retryButton": "Try again",
   "labelPhone": "Phone",
-  "labelEmail": "Email"
+  "labelEmail": "Email",
+  "lowConfidenceBanner": "I couldn't read everything clearly — worth double-checking the details below."
 }

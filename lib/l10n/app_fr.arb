@@ -199,5 +199,6 @@
   "parseFailedBody": "La photo et votre note sont toujours là — vérifiez votre connexion et réessayez.",
   "retryButton": "Réessayer",
   "labelPhone": "Téléphone",
-  "labelEmail": "Courriel"
+  "labelEmail": "Courriel",
+  "lowConfidenceBanner": "Je n'ai pas tout lu clairement — vérifiez les détails ci-dessous."
 }

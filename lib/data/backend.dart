@@ -235,6 +235,7 @@ class SupabaseBackend implements Backend {
       returnBy: _date(rec['return_by']),
       rawInput: noteText != null ? '"$noteText"' : '📸 photo',
     );
+    final confidence = rec['confidence'] as String?;
     final reminders = [
       for (final r in (data['reminders'] as List? ?? []))
         Reminder(
@@ -244,7 +245,8 @@ class SupabaseBackend implements Backend {
           seasonal: (r['seasonal'] as bool?) ?? false,
         ),
     ];
-    return ParseResult(record: record, reminders: reminders, steps: const []);
+    return ParseResult(
+        record: record, reminders: reminders, steps: const [], confidence: confidence);
   }
 
   @override
@@ -337,6 +339,7 @@ class SupabaseBackend implements Backend {
       'cost': record.cost,
       'vendor': record.vendor,
       'warranty_until': record.warrantyUntil?.toIso8601String().substring(0, 10),
+      'return_by': record.returnBy?.toIso8601String().substring(0, 10),
     }).eq('id', id);
   }
 

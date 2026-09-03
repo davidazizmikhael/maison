@@ -645,7 +645,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       vendorEmail: r.vendorEmail,
       modelSerial: r.modelSerial,
       warrantyUntil: _warrantyUntil,
-      returnBy: r.returnBy,
+      returnBy: _returnBy,
       manualFound: r.manualFound,
       rawInput: r.rawInput,
       addedOn: r.addedOn,
@@ -657,6 +657,22 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
 
   /// Editable warranty end date (starts as the AI's extraction).
   late DateTime? _warrantyUntil = result.record.warrantyUntil;
+
+  /// Editable return deadline — lets the user set it when the AI couldn't
+  /// (unknown store, nothing printed); saving then schedules the reminder.
+  late DateTime? _returnBy = result.record.returnBy;
+
+  Future<void> _pickReturnDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _returnBy ?? now.add(const Duration(days: 30)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: context.l10n.labelReturnBy,
+    );
+    if (picked != null) setState(() => _returnBy = picked);
+  }
 
   Future<void> _pickWarrantyDate() async {
     final now = DateTime.now();
@@ -772,21 +788,28 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     final record = _correctedRecord();
     final session = context.read<SessionCubit>().state;
     final homeId = session is SessionReady ? (session.homeId ?? 'demo-home') : 'demo-home';
+    // Re-run the safety net: a return date set by hand right here still
+    // earns its "Return window closes" reminder.
+    final finalResult = ensureReturnReminder(
+      ParseResult(
+        record: record,
+        reminders: [
+          ...result.reminders,
+          if (_remindOn != null)
+            Reminder(
+              title: record.title,
+              detail: context.l10n.followUpDetail,
+              due: _remindOn!,
+            ),
+        ],
+        steps: result.steps,
+        confidence: result.confidence,
+      ),
+      context.l10n.returnWindowReminder,
+    );
     context.read<AddEntryCubit>().save(
           homeId,
-          ParseResult(
-            record: record,
-            reminders: [
-              ...result.reminders,
-              if (_remindOn != null)
-                Reminder(
-                  title: record.title,
-                  detail: context.l10n.followUpDetail,
-                  due: _remindOn!,
-                ),
-            ],
-            steps: result.steps,
-          ),
+          finalResult,
           edited: _editing,
           photoBytes: widget.photoBytes,
         );
@@ -885,6 +908,24 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (result.confidence == 'low')
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: context.mc.accentWash,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(children: [
+                Icon(Icons.visibility_outlined, size: 18, color: context.mc.accentDeep),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(context.l10n.lowConfidenceBanner,
+                      style: TextStyle(
+                          fontSize: 13, height: 1.4, color: context.mc.accentDeep)),
+                ),
+              ]),
+            ),
           if (widget.photoBytes != null)
             GestureDetector(
               onTap: () => openPhotoViewer(context, bytes: widget.photoBytes),
@@ -942,6 +983,12 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                       _warrantyUntil != null ? _fmtDate(_warrantyUntil!) : context.l10n.tapToSet,
                       key: const Key('warranty-edit'),
                       onTap: _pickWarrantyDate),
+                  _pickRow(
+                      context,
+                      context.l10n.labelReturnBy,
+                      _returnBy != null ? _fmtDate(_returnBy!) : context.l10n.tapToSet,
+                      key: const Key('return-edit'),
+                      onTap: _pickReturnDate),
                 ] else ...[
                   _row(context, context.l10n.labelWhat, r.subtitle),
                   _row(context, context.l10n.labelRoom, r.room),
