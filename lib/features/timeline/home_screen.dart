@@ -90,8 +90,8 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(width: 8),
             ],
           ),
-          body: Column(children: [
-            Expanded(
+          body: Stack(children: [
+            Positioned.fill(
               child: RefreshIndicator(
             color: context.mc.accent,
             onRefresh: () async {
@@ -99,7 +99,7 @@ class HomeScreen extends StatelessWidget {
               await context.read<TimelineCubit>().load(homeId);
             },
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 120), // room under the floating dock
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -183,7 +183,7 @@ class HomeScreen extends StatelessWidget {
             ),
               ),
             ),
-            const _ComposeDock(),
+            const Positioned(left: 0, right: 0, bottom: 0, child: _ComposeDock()),
           ]),
         );
       },
@@ -619,8 +619,8 @@ class _ComposeDockState extends State<_ComposeDock> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: context.mc.paper,
+    return Padding(
+      // No background: the row floats over whatever is scrolled beneath it.
       padding: EdgeInsets.fromLTRB(16, 10, 16, _composing ? 10 : 12),
       child: SafeArea(
         top: false,
