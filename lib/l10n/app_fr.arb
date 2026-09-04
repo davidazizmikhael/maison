@@ -200,5 +200,11 @@
   "retryButton": "Réessayer",
   "labelPhone": "Téléphone",
   "labelEmail": "Courriel",
-  "lowConfidenceBanner": "Je n'ai pas tout lu clairement — vérifiez les détails ci-dessous."
+  "lowConfidenceBanner": "Je n'ai pas tout lu clairement — vérifiez les détails ci-dessous.",
+  "modeNameplate": "Plaque",
+  "modeReceipt": "Reçu",
+  "discardButton": "Ignorer",
+  "filedSnack": "Classé ✓",
+  "filedCheckSnack": "Classé — je n'étais pas sûr de tout. Un coup d'œil s'impose.",
+  "reviewAction": "Vérifier"
 }

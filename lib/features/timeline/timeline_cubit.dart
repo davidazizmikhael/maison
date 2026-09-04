@@ -1,14 +1,53 @@
+import 'dart:typed_data';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/backend.dart';
 import '../../data/models.dart';
 import '../../data/notifications.dart';
 
+/// A capture that is being parsed (or failed) — shown in place on the home
+/// screen as an animated card until it becomes a record.
+class ParsingTask {
+  const ParsingTask({
+    required this.id,
+    required this.mode,
+    this.noteText,
+    this.imageBytes,
+    this.error,
+  });
+  final int id;
+  final CaptureMode mode;
+  final String? noteText;
+  final Uint8List? imageBytes;
+  final String? error; // null while parsing
+
+  ParsingTask failed(String message) =>
+      ParsingTask(id: id, mode: mode, noteText: noteText, imageBytes: imageBytes, error: message);
+}
+
 class TimelineState {
-  const TimelineState({this.records = const [], this.reminders = const [], this.refreshing = false});
+  const TimelineState({
+    this.records = const [],
+    this.reminders = const [],
+    this.refreshing = false,
+    this.parsing = const [],
+    this.justFiled,
+    this.justFiledConfidence,
+    this.filedTick = 0,
+  });
   final List<HomeRecord> records;
   final List<Reminder> reminders;
   final bool refreshing;
+
+  /// Captures currently parsing in place (newest first).
+  final List<ParsingTask> parsing;
+
+  /// The most recently auto-filed record, for a one-shot "filed" toast;
+  /// [filedTick] increments so listeners fire even for look-alike records.
+  final HomeRecord? justFiled;
+  final String? justFiledConfidence;
+  final int filedTick;
 
   /// Reminders still waiting, soonest first.
   List<Reminder> get pending => [for (final r in reminders) if (!r.isDone) r];
@@ -24,11 +63,23 @@ class TimelineState {
       .where((r) => r.warrantyUntil != null && r.warrantyUntil!.isAfter(DateTime.now()))
       .length;
 
-  TimelineState copyWith({List<HomeRecord>? records, List<Reminder>? reminders, bool? refreshing}) =>
+  TimelineState copyWith({
+    List<HomeRecord>? records,
+    List<Reminder>? reminders,
+    bool? refreshing,
+    List<ParsingTask>? parsing,
+    HomeRecord? justFiled,
+    String? justFiledConfidence,
+    int? filedTick,
+  }) =>
       TimelineState(
         records: records ?? this.records,
         reminders: reminders ?? this.reminders,
         refreshing: refreshing ?? this.refreshing,
+        parsing: parsing ?? this.parsing,
+        justFiled: justFiled ?? this.justFiled,
+        justFiledConfidence: justFiledConfidence ?? this.justFiledConfidence,
+        filedTick: filedTick ?? this.filedTick,
       );
 }
 
@@ -39,11 +90,70 @@ class TimelineCubit extends Cubit<TimelineState> {
 
   final Backend _backend;
 
-  void _emitSynced(List<HomeRecord> records, List<Reminder> reminders, {bool refreshing = false}) {
+  int _taskSeq = 0;
+
+  void _emitSynced(List<HomeRecord> records, List<Reminder> reminders,
+      {bool refreshing = false,
+      List<ParsingTask>? parsing,
+      HomeRecord? justFiled,
+      String? justFiledConfidence}) {
     final sorted = [...reminders]..sort((a, b) => a.due.compareTo(b.due));
-    final next = TimelineState(records: records, reminders: sorted, refreshing: refreshing);
+    final next = TimelineState(
+      records: records,
+      reminders: sorted,
+      refreshing: refreshing,
+      parsing: parsing ?? state.parsing,
+      justFiled: justFiled ?? state.justFiled,
+      justFiledConfidence: justFiled != null ? justFiledConfidence : state.justFiledConfidence,
+      filedTick: justFiled != null ? state.filedTick + 1 : state.filedTick,
+    );
     emit(next);
     NotificationService.sync(next.pending);
+  }
+
+  /// The whole add-flow, in place: a card appears on the home screen at once,
+  /// parses, then becomes the saved record (reminders + notifications follow).
+  /// Failures stay on the card with retry/discard — the capture is never lost.
+  Future<void> captureAndFile(CaptureMode mode,
+      {String? noteText,
+      Uint8List? imageBytes,
+      String? homeId,
+      required String returnReminderTitle}) async {
+    final task = ParsingTask(id: _taskSeq++, mode: mode, noteText: noteText, imageBytes: imageBytes);
+    emit(state.copyWith(parsing: [task, ...state.parsing]));
+    try {
+      var result = await _backend.parseEntry(mode, noteText: noteText, imageBytes: imageBytes);
+      result = ensureReturnReminder(result, returnReminderTitle);
+      final saved = await _backend.saveRecord(homeId ?? 'demo-home', result, photoBytes: imageBytes);
+      final remaining = state.parsing.where((t) => t.id != task.id).toList();
+      if (BackendConfig.enabled && homeId != null) {
+        final (records, reminders) = await _backend.fetchAll(homeId); // rows with ids
+        _emitSynced(records, reminders,
+            parsing: remaining, justFiled: saved, justFiledConfidence: result.confidence);
+      } else {
+        _emitSynced([saved, ...state.records], [...state.reminders, ...result.reminders],
+            parsing: remaining, justFiled: saved, justFiledConfidence: result.confidence);
+      }
+    } catch (e) {
+      emit(state.copyWith(parsing: [
+        for (final t in state.parsing) t.id == task.id ? t.failed('$e') : t,
+      ]));
+    }
+  }
+
+  /// Re-run a failed capture with the same photo/note.
+  Future<void> retryParse(ParsingTask task,
+      {String? homeId, required String returnReminderTitle}) {
+    emit(state.copyWith(parsing: state.parsing.where((t) => t.id != task.id).toList()));
+    return captureAndFile(task.mode,
+        noteText: task.noteText,
+        imageBytes: task.imageBytes,
+        homeId: homeId,
+        returnReminderTitle: returnReminderTitle);
+  }
+
+  void discardParse(ParsingTask task) {
+    emit(state.copyWith(parsing: state.parsing.where((t) => t.id != task.id).toList()));
   }
 
   Future<void> load(String homeId) async {
@@ -53,7 +163,7 @@ class TimelineCubit extends Cubit<TimelineState> {
   }
 
   /// Account deletion: drop everything and cancel scheduled notifications.
-  void reset() => _emitSynced(const [], const []);
+  void reset() => _emitSynced(const [], const [], parsing: const []);
 
   /// Optimistic insert after a successful save.
   void addParsed(ParseResult result) {
@@ -80,7 +190,15 @@ class TimelineCubit extends Cubit<TimelineState> {
     // rules as the parse-time safety net).
     Reminder? extra;
     if (returnReminderTitle != null) {
-      extra = returnReminderFor(updated, state.reminders, returnReminderTitle);
+      // Only THIS record's reminders count as coverage — another item's
+      // return window landing on a nearby date must not suppress ours.
+      final own = [
+        for (final r in state.reminders)
+          if ((updated.id != null && r.recordId == updated.id) ||
+              (r.title == returnReminderTitle && r.detail == updated.title))
+            r,
+      ];
+      extra = returnReminderFor(updated, own, returnReminderTitle);
     }
     if (BackendConfig.enabled && homeId != null) {
       if (extra != null) {

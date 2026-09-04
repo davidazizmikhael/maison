@@ -642,4 +642,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lowConfidenceBanner =>
       'I couldn\'t read everything clearly — worth double-checking the details below.';
+
+  @override
+  String get modeNameplate => 'Nameplate';
+
+  @override
+  String get modeReceipt => 'Receipt';
+
+  @override
+  String get discardButton => 'Discard';
+
+  @override
+  String get filedSnack => 'Filed ✓';
+
+  @override
+  String get filedCheckSnack =>
+      'Filed — I wasn\'t sure about everything. Worth a look.';
+
+  @override
+  String get reviewAction => 'Review';
 }

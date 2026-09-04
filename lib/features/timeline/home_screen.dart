@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -45,7 +46,23 @@ class HomeScreen extends StatelessWidget {
     final session = context.watch<SessionCubit>().state;
     final address = session is SessionReady ? session.address : '';
     final homeId = session is SessionReady ? session.homeId : null;
-    return BlocBuilder<TimelineCubit, TimelineState>(
+    return BlocConsumer<TimelineCubit, TimelineState>(
+      listenWhen: (prev, curr) => curr.justFiled != null && prev.filedTick != curr.filedTick,
+      listener: (context, state) {
+        final record = state.justFiled!;
+        final unsure = state.justFiledConfidence == 'low';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(unsure ? context.l10n.filedCheckSnack : context.l10n.filedSnack),
+          duration: Duration(seconds: unsure ? 5 : 2),
+          action: unsure
+              ? SnackBarAction(
+                  label: context.l10n.reviewAction,
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => RecordDetailScreen(record: record))),
+                )
+              : null,
+        ));
+      },
       builder: (context, state) {
         final completedPreview = state.completed.take(3).toList();
         final score = _healthScore(state.pending);
@@ -125,7 +142,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 22),
                 _SectionLabel(context.l10n.sectionRecent),
                 const SizedBox(height: 12),
-                if (state.records.isEmpty) ...[
+                if (state.records.isEmpty && state.parsing.isEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -144,23 +161,39 @@ class HomeScreen extends StatelessWidget {
                       scrollDirection: Axis.horizontal,
                       clipBehavior: Clip.none,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      itemCount: state.records.length,
+                      itemCount: state.parsing.length + state.records.length,
                       separatorBuilder: (_, index) => const SizedBox(width: 12),
-                      itemBuilder: (context, i) => FloatingCard(
-                        duration: Duration(milliseconds: 4200 + (i % 3) * 500),
-                        phase: i * 0.35,
-                        child: _RecordCard(record: state.records[i]),
-                      ),
+                      itemBuilder: (context, i) {
+                        if (i < state.parsing.length) {
+                          return _ParsingCard(task: state.parsing[i], homeId: homeId);
+                        }
+                        final r = i - state.parsing.length;
+                        return FloatingCard(
+                          duration: Duration(milliseconds: 4200 + (r % 3) * 500),
+                          phase: r * 0.35,
+                          child: _RecordCard(record: state.records[r]),
+                        );
+                      },
                     ),
                   ),
               ],
             ),
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: _CameraButton(
-            key: const Key('compose-field'),
-            onTap: () =>
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => QuickNoteScreen())),
+          floatingActionButton: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _KeyboardButton(
+                key: const Key('compose-field'),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const QuickNoteScreen())),
+              ),
+              const SizedBox(width: 14),
+              _CameraButton(
+                key: const Key('compose-camera'),
+                onTap: () => startCapture(context, CaptureMode.nameplate),
+              ),
+            ],
           ),
         );
       },
@@ -475,8 +508,139 @@ class _RecordCard extends StatelessWidget {
   }
 }
 
-/// Centered camera button (the "Widget Board" placement): opens the New
-/// entry screen — type a note or jump to a scan from there.
+/// Secondary bottom button: type instead of snap.
+class _KeyboardButton extends StatelessWidget {
+  const _KeyboardButton({super.key, required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: context.mc.card,
+          border: Border.all(color: context.mc.line),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 6)),
+          ],
+        ),
+        child: Icon(Icons.keyboard_alt_outlined, size: 24, color: context.mc.ink),
+      ),
+    );
+  }
+}
+
+/// A capture parsing in place in the rail: spinner + the AI steps cycling,
+/// or — on failure — the error with retry/discard so nothing is lost.
+class _ParsingCard extends StatefulWidget {
+  const _ParsingCard({required this.task, required this.homeId});
+  final ParsingTask task;
+  final String? homeId;
+
+  @override
+  State<_ParsingCard> createState() => _ParsingCardState();
+}
+
+class _ParsingCardState extends State<_ParsingCard> {
+  int _step = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 800), (_) {
+      if (mounted) setState(() => _step++);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  List<String> _steps(BuildContext context) {
+    final l = context.l10n;
+    return switch (widget.task.mode) {
+      CaptureMode.nameplate => [
+          l.stepReadingNameplate, l.stepIdentifyingModel, l.stepFindingManual, l.stepCheckingRecalls
+        ],
+      CaptureMode.receipt => [
+          l.stepScanningReceipt, l.stepExtractingItems, l.stepReadingWarranty, l.stepTrackingReturn
+        ],
+      CaptureMode.note => [l.stepReadingNote, l.stepExtractingDetails, l.stepFilingRoom],
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = widget.task.error;
+    final steps = _steps(context);
+    final rateLimited = error != null && (error.contains('rate_limited') || error.contains('429'));
+    return Container(
+      width: 158,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.mc.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: error == null ? context.mc.accent : context.mc.line, width: 1.5),
+      ),
+      child: error == null
+          ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(strokeWidth: 3, color: context.mc.accent),
+              ),
+              const Spacer(),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(steps[_step % steps.length],
+                    key: ValueKey(_step % steps.length),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+              ),
+            ])
+          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.cloud_off_outlined, size: 22, color: context.mc.inkSoft),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Text(
+                    rateLimited ? context.l10n.rateLimitedError : context.l10n.parseFailedTitle,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12.5, height: 1.3, color: context.mc.inkSoft)),
+              ),
+              Row(children: [
+                GestureDetector(
+                  onTap: () => context.read<TimelineCubit>().retryParse(widget.task,
+                      homeId: widget.homeId,
+                      returnReminderTitle: context.l10n.returnWindowReminder),
+                  child: Text(context.l10n.retryButton,
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700, color: context.mc.accentDeep)),
+                ),
+                const SizedBox(width: 14),
+                GestureDetector(
+                  onTap: () => context.read<TimelineCubit>().discardParse(widget.task),
+                  child: Text(context.l10n.discardButton,
+                      style: TextStyle(fontSize: 13, color: context.mc.inkSoft)),
+                ),
+              ]),
+            ]),
+    );
+  }
+}
+
+/// Primary bottom button: the camera sheet (nameplate/receipt toggle inside).
 class _CameraButton extends StatelessWidget {
   const _CameraButton({super.key, required this.onTap});
   final VoidCallback onTap;

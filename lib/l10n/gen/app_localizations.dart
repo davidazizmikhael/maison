@@ -1219,6 +1219,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I couldn\'t read everything clearly — worth double-checking the details below.'**
   String get lowConfidenceBanner;
+
+  /// No description provided for @modeNameplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Nameplate'**
+  String get modeNameplate;
+
+  /// No description provided for @modeReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Receipt'**
+  String get modeReceipt;
+
+  /// No description provided for @discardButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get discardButton;
+
+  /// No description provided for @filedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Filed ✓'**
+  String get filedSnack;
+
+  /// No description provided for @filedCheckSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Filed — I wasn\'t sure about everything. Worth a look.'**
+  String get filedCheckSnack;
+
+  /// No description provided for @reviewAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get reviewAction;
 }
 
 class _AppLocalizationsDelegate

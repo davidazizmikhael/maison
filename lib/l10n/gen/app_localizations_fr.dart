@@ -644,4 +644,23 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get lowConfidenceBanner =>
       'Je n\'ai pas tout lu clairement — vérifiez les détails ci-dessous.';
+
+  @override
+  String get modeNameplate => 'Plaque';
+
+  @override
+  String get modeReceipt => 'Reçu';
+
+  @override
+  String get discardButton => 'Ignorer';
+
+  @override
+  String get filedSnack => 'Classé ✓';
+
+  @override
+  String get filedCheckSnack =>
+      'Classé — je n\'étais pas sûr de tout. Un coup d\'œil s\'impose.';
+
+  @override
+  String get reviewAction => 'Vérifier';
 }

@@ -1,11 +1,15 @@
 class Reminder {
   Reminder(
       {this.id,
+      this.recordId,
       required this.title,
       required this.detail,
       required this.due,
       this.seasonal = false,
       this.doneAt});
+
+  /// The record this reminder belongs to (null for standalone/demo ones).
+  final String? recordId;
 
   /// Database row id (null in demo mode).
   final String? id;
@@ -30,6 +34,7 @@ class Reminder {
 
   Reminder copyWith({DateTime? due, DateTime? doneAt}) => Reminder(
       id: id,
+      recordId: recordId,
       title: title,
       detail: detail,
       due: due ?? this.due,

@@ -326,5 +326,11 @@
   "retryButton": "Try again",
   "labelPhone": "Phone",
   "labelEmail": "Email",
-  "lowConfidenceBanner": "I couldn't read everything clearly — worth double-checking the details below."
+  "lowConfidenceBanner": "I couldn't read everything clearly — worth double-checking the details below.",
+  "modeNameplate": "Nameplate",
+  "modeReceipt": "Receipt",
+  "discardButton": "Discard",
+  "filedSnack": "Filed ✓",
+  "filedCheckSnack": "Filed — I wasn't sure about everything. Worth a look.",
+  "reviewAction": "Review"
 }

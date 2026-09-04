@@ -7,49 +7,53 @@ import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/l10n_ext.dart';
-import '../../core/photo_viewer.dart';
 import '../../core/theme.dart';
 import '../../data/backend.dart';
 import '../../data/models.dart';
 import '../session/session_cubit.dart';
 import '../timeline/timeline_cubit.dart';
-import 'add_entry_cubit.dart';
 
-/// Route that owns one AddEntryCubit for the parse leg of the journey.
-Route<void> parsingRoute(CaptureMode mode, {String? noteText, Uint8List? imageBytes}) {
-  return MaterialPageRoute(
-    builder: (routeContext) => BlocProvider(
-      create: (_) => AddEntryCubit(Backend.instance)
-        ..parse(mode,
-            noteText: noteText,
-            imageBytes: imageBytes,
-            returnReminderTitle: routeContext.l10n.returnWindowReminder),
-      child: ParsingScreen(mode: mode, imageBytes: imageBytes, noteText: noteText),
-    ),
-  );
+/// Hands a capture to the timeline: the item appears on the home screen at
+/// once and parses in place — no intermediate screens.
+void fileCapture(BuildContext context, CaptureMode mode,
+    {String? noteText, Uint8List? imageBytes}) {
+  final session = context.read<SessionCubit>().state;
+  final homeId = session is SessionReady ? session.homeId : null;
+  context.read<TimelineCubit>().captureAndFile(
+        mode,
+        noteText: noteText,
+        imageBytes: imageBytes,
+        homeId: homeId,
+        returnReminderTitle: context.l10n.returnWindowReminder,
+      );
+}
+
+/// Camera button flow: open the sheet, then file whatever comes back.
+Future<void> startCapture(BuildContext context, CaptureMode mode) async {
+  final result = await showCaptureSheet(context, mode);
+  if (result == null || !context.mounted) return;
+  fileCapture(context, result.mode, imageBytes: result.bytes);
 }
 
 /// Camera as a bottom sheet (ChatGPT-style): the live viewfinder slides up
 /// over the current screen as a rounded panel, controls overlaid inside it.
-/// Resolves with the captured bytes (null bytes = demo mode, proceed without).
-Future<void> showCaptureSheet(BuildContext context, CaptureMode mode) async {
-  final result = await showModalBottomSheet<CaptureResult>(
+/// Resolves with the captured bytes + chosen mode (null bytes = demo mode).
+Future<CaptureResult?> showCaptureSheet(BuildContext context, CaptureMode mode) {
+  return showModalBottomSheet<CaptureResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-    // Size from the screen, not the caller — the compose bar's own render box
-    // is only ~70px tall.
+    // Size from the screen, not the caller — a button's own render box is tiny.
     constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
     builder: (_) => CaptureSheet(mode: mode),
   );
-  if (result == null || !context.mounted) return; // dismissed
-  Navigator.of(context).push(parsingRoute(mode, imageBytes: result.bytes));
 }
 
 class CaptureResult {
-  const CaptureResult(this.bytes);
+  const CaptureResult(this.bytes, this.mode);
   final Uint8List? bytes;
+  final CaptureMode mode;
 }
 
 class CaptureSheet extends StatefulWidget {
@@ -61,6 +65,7 @@ class CaptureSheet extends StatefulWidget {
 }
 
 class _CaptureSheetState extends State<CaptureSheet> {
+  late CaptureMode _mode = widget.mode;
   CameraController? _controller;
   bool _initializing = BackendConfig.enabled;
   bool _shooting = false;
@@ -108,7 +113,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
 
   Future<void> _shoot() async {
     if (!BackendConfig.enabled) {
-      Navigator.of(context).pop(const CaptureResult(null)); // demo: canned parse
+      Navigator.of(context).pop(CaptureResult(null, _mode)); // demo: canned parse
       return;
     }
     final controller = _controller;
@@ -122,7 +127,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
     try {
       final file = await controller.takePicture();
       final bytes = await file.readAsBytes();
-      if (mounted) Navigator.of(context).pop(CaptureResult(bytes));
+      if (mounted) Navigator.of(context).pop(CaptureResult(bytes, _mode));
     } catch (e) {
       if (mounted) {
         setState(() => _shooting = false);
@@ -141,7 +146,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
       );
       if (file == null) return; // user cancelled the picker, keep the sheet
       final bytes = await file.readAsBytes();
-      if (mounted) Navigator.of(context).pop(CaptureResult(bytes));
+      if (mounted) Navigator.of(context).pop(CaptureResult(bytes, _mode));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -162,6 +167,26 @@ class _CaptureSheetState extends State<CaptureSheet> {
           color: Colors.black.withValues(alpha: 0.45),
         ),
         child: child,
+      ),
+    );
+  }
+
+  Widget _modeChip(String label, CaptureMode mode) {
+    final selected = _mode == mode;
+    return GestureDetector(
+      key: Key('mode-${mode.name}'),
+      onTap: () => setState(() => _mode = mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: selected ? MaisonColors.ink : Colors.white)),
       ),
     );
   }
@@ -220,7 +245,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isNameplate = widget.mode == CaptureMode.nameplate;
+    final isNameplate = _mode == CaptureMode.nameplate;
     final cameraLive = _controller?.value.isInitialized ?? false;
     return FractionallySizedBox(
       heightFactor: 0.86,
@@ -230,9 +255,27 @@ class _CaptureSheetState extends State<CaptureSheet> {
           fit: StackFit.expand,
           children: [
             _viewfinder(context, isNameplate),
+            Positioned(
+              top: 14,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    _modeChip(context.l10n.modeNameplate, CaptureMode.nameplate),
+                    _modeChip(context.l10n.modeReceipt, CaptureMode.receipt),
+                  ]),
+                ),
+              ),
+            ),
             if (cameraLive)
               Positioned(
-                top: 14,
+                top: 62,
                 left: 24,
                 right: 24,
                 child: Container(
@@ -315,18 +358,20 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
   }
 
   void _file() {
-    Navigator.of(context)
-        .pushReplacement(parsingRoute(CaptureMode.note, noteText: _controller.text));
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    fileCapture(context, CaptureMode.note, noteText: text);
+    Navigator.of(context).pop(); // the item is already parsing on the home screen
   }
 
   Widget _scanChip(BuildContext context, IconData icon, String label, CaptureMode mode) {
     return GestureDetector(
-      onTap: () async {
+      onTap: () {
         // Pop this screen first, then open the sheet from the navigator's own
         // context — this screen's context is defunct once popped.
         final nav = Navigator.of(context);
         nav.pop();
-        await showCaptureSheet(nav.context, mode);
+        startCapture(nav.context, mode);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
@@ -397,705 +442,4 @@ class _QuickNoteScreenState extends State<QuickNoteScreen> {
       ),
     );
   }
-}
-
-/// The "AI is working" screen: animated step-by-step progress while the
-/// AddEntryCubit parses; moves to confirmation when both are done.
-class ParsingScreen extends StatefulWidget {
-  const ParsingScreen({super.key, required this.mode, this.imageBytes, this.noteText});
-  final CaptureMode mode;
-  final Uint8List? imageBytes;
-  final String? noteText;
-
-  @override
-  State<ParsingScreen> createState() => _ParsingScreenState();
-}
-
-class _ParsingScreenState extends State<ParsingScreen> {
-  static const _stepCount = {
-    CaptureMode.nameplate: 4,
-    CaptureMode.receipt: 4,
-    CaptureMode.note: 3,
-  };
-
-  List<String> _steps(BuildContext context) {
-    final l = context.l10n;
-    return switch (widget.mode) {
-      CaptureMode.nameplate => [l.stepReadingNameplate, l.stepIdentifyingModel, l.stepFindingManual, l.stepCheckingRecalls],
-      CaptureMode.receipt => [l.stepScanningReceipt, l.stepExtractingItems, l.stepReadingWarranty, l.stepTrackingReturn],
-      CaptureMode.note => [l.stepReadingNote, l.stepExtractingDetails, l.stepFilingRoom],
-    };
-  }
-  bool _animationDone = false;
-  bool _navigated = false;
-  int _step = 0;
-  String? _error;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _startAnimation();
-  }
-
-  void _startAnimation() {
-    _timer?.cancel();
-    _step = 0;
-    _animationDone = false;
-    _timer = Timer.periodic(const Duration(milliseconds: 800), (t) {
-      if (_step < _stepCount[widget.mode]! - 1) {
-        setState(() => _step++);
-      } else {
-        t.cancel();
-        _animationDone = true;
-        _maybeFinish();
-      }
-    });
-  }
-
-  /// Re-run the same parse with the same capture — nothing is lost.
-  void _retry() {
-    setState(() => _error = null);
-    _startAnimation();
-    context.read<AddEntryCubit>().parse(
-          widget.mode,
-          noteText: widget.noteText,
-          imageBytes: widget.imageBytes,
-          returnReminderTitle: context.l10n.returnWindowReminder,
-        );
-  }
-
-  void _maybeFinish() {
-    if (_navigated || !mounted || !_animationDone) return;
-    final state = context.read<AddEntryCubit>().state;
-    if (state is! AddEntryParsed) return;
-    _navigated = true;
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) {
-        // pushReplacement disposes this route's cubit, so the confirm screen
-        // gets its own — the parsed result and photo travel by constructor.
-        Navigator.of(context).pushReplacement(MaterialPageRoute(
-            builder: (_) => BlocProvider(
-                create: (_) => AddEntryCubit(Backend.instance),
-                child: ConfirmScreen(result: state.result, photoBytes: widget.imageBytes))));
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocListener<AddEntryCubit, AddEntryState>(
-      listener: (context, state) {
-        switch (state) {
-          case AddEntryParsed():
-            _maybeFinish();
-          case AddEntryError(:final message):
-            _timer?.cancel();
-            setState(() => _error = message);
-          case _:
-            break;
-        }
-      },
-      child: _buildBody(context),
-    );
-  }
-
-  Widget _buildBody(BuildContext context) {
-    final error = _error;
-    if (error != null) return _buildError(context, error);
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(36),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: CircularProgressIndicator(color: context.mc.accent, strokeWidth: 5),
-                ),
-              ),
-              const SizedBox(height: 36),
-              ...List.generate(_steps(context).length, (i) {
-                final done = i < _step;
-                final active = i == _step;
-                return AnimatedOpacity(
-                  duration: const Duration(milliseconds: 300),
-                  opacity: i <= _step ? 1 : 0.25,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Row(
-                      children: [
-                        Icon(
-                          done ? Icons.check_circle : (active ? Icons.autorenew : Icons.circle_outlined),
-                          size: 22,
-                          color: done ? context.mc.green : context.mc.accent,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(_steps(context)[i],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 16.5,
-                                  fontWeight: active ? FontWeight.w800 : FontWeight.w500)),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildError(BuildContext context, String message) {
-    final rateLimited = message.contains('rate_limited') || message.contains('429');
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(36),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Icon(Icons.cloud_off_outlined, size: 44, color: context.mc.inkSoft),
-              const SizedBox(height: 18),
-              Text(context.l10n.parseFailedTitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              Text(
-                rateLimited ? context.l10n.rateLimitedError : context.l10n.parseFailedBody,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: context.mc.inkSoft, height: 1.5),
-              ),
-              const SizedBox(height: 28),
-              if (!rateLimited)
-                FilledButton(onPressed: _retry, child: Text(context.l10n.retryButton)),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(context.l10n.cancelButton,
-                    style: TextStyle(color: context.mc.inkSoft)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// AI transparency: show what was extracted, let the user fix anything, then save.
-class ConfirmScreen extends StatefulWidget {
-  const ConfirmScreen({super.key, required this.result, this.photoBytes});
-  final ParseResult result;
-  final Uint8List? photoBytes;
-
-  @override
-  State<ConfirmScreen> createState() => _ConfirmScreenState();
-}
-
-class _ConfirmScreenState extends State<ConfirmScreen> {
-  ParseResult get result => widget.result;
-
-  bool _editing = false;
-  late final TextEditingController _title =
-      TextEditingController(text: result.record.title);
-  late final TextEditingController _room =
-      TextEditingController(text: result.record.room);
-  late final TextEditingController _cost = TextEditingController(
-      text: result.record.cost?.toStringAsFixed(2) ?? '');
-  late final TextEditingController _vendor =
-      TextEditingController(text: result.record.vendor ?? '');
-
-  @override
-  void dispose() {
-    _title.dispose();
-    _room.dispose();
-    _cost.dispose();
-    _vendor.dispose();
-    super.dispose();
-  }
-
-  /// The record with any user corrections applied on top of the AI parse.
-  HomeRecord _correctedRecord() {
-    final r = result.record;
-    return HomeRecord(
-      kind: r.kind,
-      title: _title.text.trim().isEmpty ? r.title : _title.text.trim(),
-      subtitle: r.subtitle,
-      room: _room.text.trim().isEmpty ? r.room : _room.text.trim(),
-      cost: double.tryParse(_cost.text.replaceAll(',', '').replaceAll('\$', '')) ?? r.cost,
-      vendor: _vendor.text.trim().isEmpty ? r.vendor : _vendor.text.trim(),
-      vendorDomain: r.vendorDomain,
-      vendorPhone: r.vendorPhone,
-      vendorEmail: r.vendorEmail,
-      modelSerial: r.modelSerial,
-      warrantyUntil: _warrantyUntil,
-      returnBy: _returnBy,
-      manualFound: r.manualFound,
-      rawInput: r.rawInput,
-      addedOn: r.addedOn,
-    );
-  }
-
-  /// Optional user-chosen follow-up date, saved as an extra reminder.
-  DateTime? _remindOn;
-
-  /// Editable warranty end date (starts as the AI's extraction).
-  late DateTime? _warrantyUntil = result.record.warrantyUntil;
-
-  /// Editable return deadline — lets the user set it when the AI couldn't
-  /// (unknown store, nothing printed); saving then schedules the reminder.
-  late DateTime? _returnBy = result.record.returnBy;
-
-  Future<void> _pickReturnDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _returnBy ?? now.add(const Duration(days: 30)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
-      helpText: context.l10n.labelReturnBy,
-    );
-    if (picked != null) setState(() => _returnBy = picked);
-  }
-
-  Future<void> _pickWarrantyDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _warrantyUntil ?? now.add(const Duration(days: 365)),
-      firstDate: DateTime(now.year - 15),
-      lastDate: DateTime(now.year + 30),
-      helpText: context.l10n.labelWarranty,
-    );
-    if (picked != null) setState(() => _warrantyUntil = picked);
-  }
-
-  Future<void> _pickRoom() async {
-    final session = context.read<SessionCubit>().state;
-    final profile = session is SessionReady ? session.profile : null;
-    final rooms = <String>{
-      if (_room.text.trim().isNotEmpty) _room.text.trim(),
-      ...?profile?.rooms,
-      'Kitchen', 'Living room', 'Bathroom', 'Bedroom', 'Basement', 'Garage', 'Home',
-    }.toList();
-    final chosen = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: context.mc.paper,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-              child: Text(sheetContext.l10n.labelRoom,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final room in rooms)
-                    ListTile(
-                      dense: true,
-                      title: Text(room,
-                          style: TextStyle(
-                              fontWeight: room == _room.text
-                                  ? FontWeight.w800
-                                  : FontWeight.w500)),
-                      trailing: room == _room.text
-                          ? Icon(Icons.check, color: sheetContext.mc.accentDeep)
-                          : null,
-                      onTap: () => Navigator.of(sheetContext).pop(room),
-                    ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (chosen != null) setState(() => _room.text = chosen);
-  }
-
-  /// A tappable value row used in edit mode for picker-driven fields.
-  Widget _pickRow(BuildContext context, String label, String value,
-      {required VoidCallback onTap, Key? key}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(children: [
-        SizedBox(
-            width: 105,
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w700, color: context.mc.inkSoft))),
-        Expanded(
-          child: GestureDetector(
-            key: key,
-            onTap: onTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-              decoration: BoxDecoration(
-                color: context.mc.paper,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: context.mc.line),
-              ),
-              child: Row(children: [
-                Expanded(
-                    child: Text(value,
-                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600))),
-                Icon(Icons.expand_more, size: 18, color: context.mc.inkSoft),
-              ]),
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Future<void> _pickRemindDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _remindOn ?? now.add(const Duration(days: 30)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 5)),
-      helpText: context.l10n.remindMeCard,
-    );
-    if (picked != null) setState(() => _remindOn = picked);
-  }
-
-  void _save() {
-    final record = _correctedRecord();
-    final session = context.read<SessionCubit>().state;
-    final homeId = session is SessionReady ? (session.homeId ?? 'demo-home') : 'demo-home';
-    // Re-run the safety net: a return date set by hand right here still
-    // earns its "Return window closes" reminder.
-    final finalResult = ensureReturnReminder(
-      ParseResult(
-        record: record,
-        reminders: [
-          ...result.reminders,
-          if (_remindOn != null)
-            Reminder(
-              title: record.title,
-              detail: context.l10n.followUpDetail,
-              due: _remindOn!,
-            ),
-        ],
-        steps: result.steps,
-        confidence: result.confidence,
-      ),
-      context.l10n.returnWindowReminder,
-    );
-    context.read<AddEntryCubit>().save(
-          homeId,
-          finalResult,
-          edited: _editing,
-          photoBytes: widget.photoBytes,
-        );
-  }
-
-  Widget _row(BuildContext context, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-              width: 105,
-              child: Text(label,
-                  style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w700, color: context.mc.inkSoft))),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600))),
-        ],
-      ),
-    );
-  }
-
-  Widget _editRow(BuildContext context, String label, TextEditingController controller, {TextInputType? keyboard}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(
-              width: 105,
-              child: Text(label,
-                  style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w700, color: context.mc.inkSoft))),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboard,
-              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                isDense: true,
-                filled: true,
-                fillColor: context.mc.paper,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: context.mc.line)),
-                enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: context.mc.line)),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: context.mc.accent, width: 1.5)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocConsumer<AddEntryCubit, AddEntryState>(
-      listener: (context, state) {
-        switch (state) {
-          case AddEntrySaved(:final saved, :final edited):
-            final session = context.read<SessionCubit>().state;
-            final liveHomeId = session is SessionReady ? session.homeId : null;
-            if (BackendConfig.enabled && liveHomeId != null) {
-              // Reload so records and reminders carry their database ids.
-              context.read<TimelineCubit>().load(liveHomeId);
-            } else {
-              context.read<TimelineCubit>().addParsed(saved);
-            }
-            Navigator.of(context).popUntil((route) => route.isFirst);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(edited
-                    ? context.l10n.savedCorrectionsSnack
-                    : context.l10n.savedSnack),
-                duration: const Duration(seconds: 2)));
-          case AddEntryError(:final message, result: final _?):
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(context.l10n.saveError(message))));
-          case _:
-            break;
-        }
-      },
-      builder: (context, state) => _buildBody(context, saving: state is AddEntrySaving),
-    );
-  }
-
-  Widget _buildBody(BuildContext context, {required bool saving}) {
-    final r = result.record;
-    return Scaffold(
-      appBar: AppBar(title: Text(_editing ? context.l10n.confirmTitleEditing : context.l10n.confirmTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          if (result.confidence == 'low')
-            Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              decoration: BoxDecoration(
-                color: context.mc.accentWash,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(children: [
-                Icon(Icons.visibility_outlined, size: 18, color: context.mc.accentDeep),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(context.l10n.lowConfidenceBanner,
-                      style: TextStyle(
-                          fontSize: 13, height: 1.4, color: context.mc.accentDeep)),
-                ),
-              ]),
-            ),
-          if (widget.photoBytes != null)
-            GestureDetector(
-              onTap: () => openPhotoViewer(context, bytes: widget.photoBytes),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.memory(
-                    widget.photoBytes!,
-                    height: 170,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-          if (r.rawInput != null) ...[
-            Text(context.l10n.youGaveMe(r.rawInput!),
-                style: TextStyle(
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
-                    color: context.mc.inkSoft,
-                    height: 1.45)),
-            const SizedBox(height: 16),
-            Container(height: 1, color: context.mc.line),
-            const SizedBox(height: 16),
-          ],
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: context.mc.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.mc.line),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Text(r.emoji, style: const TextStyle(fontSize: 26)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: Text(r.title,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
-                ]),
-                Divider(height: 26, color: context.mc.line),
-                if (_editing) ...[
-                  _editRow(context, context.l10n.labelName, _title),
-                  _pickRow(context, context.l10n.labelRoom, _room.text,
-                      key: const Key('room-edit'), onTap: _pickRoom),
-                  _editRow(context, context.l10n.labelCost, _cost, keyboard: const TextInputType.numberWithOptions(decimal: true)),
-                  _editRow(context, context.l10n.labelVendor, _vendor),
-                  _pickRow(
-                      context,
-                      context.l10n.labelWarranty,
-                      _warrantyUntil != null ? _fmtDate(_warrantyUntil!) : context.l10n.tapToSet,
-                      key: const Key('warranty-edit'),
-                      onTap: _pickWarrantyDate),
-                  _pickRow(
-                      context,
-                      context.l10n.labelReturnBy,
-                      _returnBy != null ? _fmtDate(_returnBy!) : context.l10n.tapToSet,
-                      key: const Key('return-edit'),
-                      onTap: _pickReturnDate),
-                ] else ...[
-                  _row(context, context.l10n.labelWhat, r.subtitle),
-                  _row(context, context.l10n.labelRoom, r.room),
-                  if (r.cost != null) _row(context, context.l10n.labelCost, '\$${r.cost!.toStringAsFixed(2)}'),
-                  if (r.vendor != null) _row(context, context.l10n.labelVendor, r.vendor!),
-                ],
-                if (r.modelSerial != null) _row(context, context.l10n.labelSerial, r.modelSerial!),
-                if (!_editing && r.warrantyUntil != null)
-                  _row(context, context.l10n.labelWarranty, context.l10n.warrantyUntil(_fmtDate(r.warrantyUntil!))),
-                if (r.returnBy != null) _row(context, context.l10n.labelReturnBy, _fmtDate(r.returnBy!)),
-                if (r.manualFound) _row(context, context.l10n.labelManual, context.l10n.manualFound),
-              ],
-            ),
-          ),
-          if (result.reminders.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            ...result.reminders.map((rem) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(children: [
-                    Icon(Icons.notifications_none, size: 17, color: context.mc.inkSoft),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: Text(rem.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 14, color: context.mc.navy))),
-                    Text(_fmtDate(rem.due),
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: context.mc.accentDeep)),
-                  ]),
-                )),
-          ],
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: _pickRemindDate,
-            child: SizedBox(
-              height: 46,
-              child: Row(children: [
-                Icon(Icons.calendar_today_outlined, size: 17, color: context.mc.inkSoft),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _remindOn == null
-                        ? context.l10n.remindMeCard
-                        : context.l10n.reminderOnDate(_fmtDate(_remindOn!)),
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: _remindOn == null ? context.mc.navy : context.mc.accentDeep),
-                  ),
-                ),
-                if (_remindOn == null)
-                  Icon(Icons.add, size: 18, color: context.mc.inkSoft)
-                else
-                  GestureDetector(
-                    onTap: () => setState(() => _remindOn = null),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(Icons.close, size: 18, color: context.mc.inkSoft),
-                    ),
-                  ),
-              ]),
-            ),
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            icon: saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                : const Icon(Icons.check),
-            label: Text(saving
-                ? context.l10n.savingLabel
-                : (_editing ? context.l10n.saveCorrections : context.l10n.saveButton)),
-            onPressed: saving ? null : _save,
-          ),
-          const SizedBox(height: 10),
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: _editing ? context.mc.inkSoft : context.mc.accentDeep,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-            ),
-            icon: Icon(_editing ? Icons.undo : Icons.edit_outlined, size: 18),
-            label: Text(_editing ? context.l10n.keepAiVersion : context.l10n.fixFirst,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-            onPressed: () => setState(() {
-              if (_editing) {
-                // Revert any edits back to what the AI extracted.
-                _title.text = result.record.title;
-                _room.text = result.record.room;
-                _cost.text = result.record.cost?.toStringAsFixed(2) ?? '';
-                _vendor.text = result.record.vendor ?? '';
-                _warrantyUntil = result.record.warrantyUntil;
-              }
-              _editing = !_editing;
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-String _fmtDate(DateTime d) {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return '${months[d.month - 1]} ${d.day}, ${d.year}';
 }

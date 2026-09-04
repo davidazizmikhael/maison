@@ -85,6 +85,26 @@ void main() {
       await cubit.close();
     });
 
+    test("another record's return reminder on a nearby date does not block ours", () async {
+      final cubit = TimelineCubit(MockBackend());
+      final saved = _result().record;
+      cubit.addParsed(ParseResult(
+        record: saved,
+        reminders: [
+          // belongs to some other item (dishwasher), due close to our new date
+          Reminder(title: 'Dishwasher return window', detail: 'Bosch', due: DateTime.now().add(const Duration(days: 28))),
+        ],
+        steps: const [],
+      ));
+      final edited = HomeRecord(
+        kind: saved.kind, title: saved.title, subtitle: saved.subtitle, room: saved.room,
+        returnBy: DateTime.now().add(const Duration(days: 30)),
+      );
+      await cubit.updateRecord(saved, edited, returnReminderTitle: 'Return window closes');
+      expect(cubit.state.reminders.where((r) => r.title == 'Return window closes'), hasLength(1));
+      await cubit.close();
+    });
+
     test('an unrelated far-off reminder does not count as coverage', () {
       final r = ensureReturnReminder(
           _result(

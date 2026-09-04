@@ -367,6 +367,7 @@ class SupabaseBackend implements Backend {
         .single();
     return Reminder(
       id: row['id'] as String,
+      recordId: recordId,
       title: reminder.title,
       detail: reminder.detail,
       due: reminder.due,
@@ -427,6 +428,7 @@ class SupabaseBackend implements Backend {
           detail: (r['detail'] as String?) ?? '',
           due: _date(r['due_on'])!,
           seasonal: (r['seasonal'] as bool?) ?? false,
+          recordId: r['record_id'] as String?,
           doneAt: r['done_at'] == null ? null : DateTime.tryParse(r['done_at'] as String),
         ),
     ];

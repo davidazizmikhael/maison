@@ -23,6 +23,7 @@ class MockAi {
             warrantyUntil: DateTime(now.year + 3, now.month, now.day),
             rawInput: '📸 photo of furnace nameplate',
           ),
+          confidence: 'high',
           reminders: [
             Reminder(
               title: 'Replace furnace filter',
@@ -49,6 +50,7 @@ class MockAi {
             manualFound: true,
             rawInput: '📸 photo of Canadian Tire receipt',
           ),
+          confidence: 'high',
           reminders: [
             Reminder(
               title: 'Snow blower return window',
@@ -81,6 +83,7 @@ class MockAi {
             rawInput: '"$text"',
           ),
           reminders: [],
+          confidence: 'high',
         );
     }
   }

@@ -64,54 +64,25 @@ void main() {
     // 2 — Home dashboard
     await shot(tester, '04-home-dashboard');
 
-    // 3 — Add: camera button → New entry → scan a nameplate
-    await tester.tap(find.byKey(const Key('compose-field')));
-    await tester.pumpAndSettle();
-    await shot(tester, '05-new-entry');
-    await tester.tap(find.text('Scan a nameplate'));
+    // 3 — Camera button → capture sheet (nameplate/receipt toggle) → shutter.
+    // The item then appears on the home screen and parses IN PLACE.
+    await tester.tap(find.byKey(const Key('compose-camera')));
     await tester.pumpAndSettle();
     await waitFor(tester, find.byKey(const Key('capture')));
     // Regression: the sheet was once sized from its caller's tiny render box.
     expect(tester.getSize(find.byType(CaptureSheet)).height, greaterThan(400));
-    await shot(tester, '06-camera-nameplate');
+    expect(find.byKey(const Key('mode-receipt')), findsOneWidget);
+    await shot(tester, '05-capture-sheet');
     await tester.tap(find.byKey(const Key('capture')));
-    await tester.pump(const Duration(milliseconds: 400));
-    await binding.takeScreenshot('07-ai-parsing');
+    // No pumpAndSettle here: the parsing card's spinner never settles.
+    await tester.pump(const Duration(milliseconds: 500));
+    await binding.takeScreenshot('06-parsing-in-place');
+    await waitFor(tester, find.text('Furnace — Lennox ML296V')); // filed, no screens in between
+    await tester.pumpAndSettle();
+    await shot(tester, '07-home-after-file');
 
-    // 4 — AI result confirmation, including the "fix something" edit mode
-    await waitFor(tester, find.text("Here's what I got"));
-    await shot(tester, '08-confirm-parsed-record');
-    await tester.tap(find.text('Fix something first'));
-    await tester.pumpAndSettle();
-    await shot(tester, '08b-fix-details-editing');
-    // Room is picked from the home profile's rooms
-    await tester.tap(find.byKey(const Key('room-edit')));
-    await tester.pumpAndSettle();
-    await shot(tester, '08c-room-picker');
-    await tester.tap(find.text('Garage').last);
-    await tester.pumpAndSettle();
-    // Warranty date is edited via the date picker
-    await tester.tap(find.byKey(const Key('warranty-edit')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    // Return-by is manually settable too — saving must spawn the reminder
-    await tester.ensureVisible(find.byKey(const Key('return-edit')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('return-edit')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Save my corrections'));
-    await tester.pumpAndSettle();
-    // Saving hits the database in live mode — wait for the journal to return.
-    await waitFor(tester, find.text('Furnace — Lennox ML296V'));
-    // The hand-set return date produced its reminder via the safety net
-    expect(find.text('Return window closes'), findsOneWidget);
-    await shot(tester, '09-home-after-save');
-
-    // 5 — Record detail (the rail can sit below the fold — scroll to it, and
-    // let the floating "saved" snackbar expire; it hovers over the rail)
+    // 4 — Corrections happen on the record itself: detail → Edit.
+    // Let the "Filed" snackbar expire first; the rail may sit below the fold.
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Furnace — Lennox ML296V'));
@@ -121,40 +92,54 @@ void main() {
     await waitFor(tester, find.text('View manual'));
     // Vendor contact extracted from the nameplate (tap-to-call row)
     expect(find.text('1-800-953-6669'), findsOneWidget);
-    await shot(tester, '10-record-detail');
+    await shot(tester, '08-record-detail');
 
-    // 5a — Export the claim pack straight from the record
+    // 4a — Export the claim pack straight from the record
     await tester.tap(find.text('Warranty claim pack'));
     await tester.pumpAndSettle();
     await waitFor(tester, find.text('📄  PDF ready'));
     await tester.tap(find.text('Nice'));
     await tester.pumpAndSettle();
 
-    // 5b — Edit the record after saving: change the room, save
+    // 4b — Edit: room, warranty date, and a hand-set return date (which must
+    // spawn its reminder on save)
     await tester.tap(find.byIcon(Icons.edit_outlined));
     await tester.pumpAndSettle();
-    await shot(tester, '10b-edit-record');
+    await shot(tester, '09-edit-record');
     await tester.tap(find.byKey(const Key('room-edit')));
     await tester.pumpAndSettle();
+    await shot(tester, '09b-room-picker');
     await tester.tap(find.text('Kitchen').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('warranty-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('return-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('return-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save my corrections'));
     await tester.pumpAndSettle();
     await waitFor(tester, find.byKey(const Key('compose-field'))); // back on the journal
+    // The list kept its scroll offset — bring Up next back into the tree.
+    await tester.fling(find.byType(ListView).first, const Offset(0, 800), 2000);
+    await tester.pumpAndSettle();
+    expect(find.text('Return window closes'), findsOneWidget);
 
-    // 6 — Quick note flow (the compose bar IS the entry point now).
-    // The floating "saved" snackbar sits over the compose bar — let it expire.
-    await tester.pump(const Duration(seconds: 4));
+    // 5 — Keyboard button → quick note → "File it" → parses in place on home
+    await tester.pump(const Duration(seconds: 4)); // corrections snackbar
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('compose-field')));
     await tester.pumpAndSettle();
-    await shot(tester, '11-quick-note');
+    await shot(tester, '10-quick-note');
     await tester.tap(find.text('File it'));
-    await waitFor(tester, find.text("Here's what I got"));
-    await shot(tester, '12-confirm-note-record');
-    await tester.tap(find.text('Looks right — save it'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await waitFor(tester, find.text('Bathroom faucet repair'));
     await tester.pumpAndSettle();
-    await waitFor(tester, find.byKey(const Key('compose-field')));
+    await shot(tester, '11-home-after-note');
 
     // 6b — Delete the note record from its detail screen (snackbar again)
     await tester.pump(const Duration(seconds: 4));
