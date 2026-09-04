@@ -203,10 +203,16 @@ function instructionFor(mode: string, today: string): string {
     `"Return window closes" due 3 days before return_by so the buyer can still act on it.`;
   switch (mode) {
     case "photo":
-      return `${base} The image is a photo the homeowner just took. FIRST decide what it shows: an appliance ` +
-        `nameplate/rating plate, a purchase receipt or invoice, or something else (a product box, a manual cover, ` +
-        `a repair in progress). Then apply the matching rules. ${nameplateRules} ${receiptRules} ` +
-        `If it is neither, describe the item as best you can with kind "service" or "appliance" and confidence "low".`;
+      // Keep this compact: Gemini's free tier rejects long instruction+image
+      // payloads as "high demand" (503) — the verbose per-mode rules are for
+      // the explicit modes only.
+      return `${base} The image is a photo the homeowner just took. Decide what it is, then extract: ` +
+        `NAMEPLATE/rating plate → kind "appliance", title "Brand — Model", serial into model_serial, ` +
+        `infer the room from the appliance type. RECEIPT or invoice (any retail purchase: clothes, shoes, ` +
+        `electronics too) → kind "receipt" (store) or "service" (contractor), main item into title, total ` +
+        `into cost, store into vendor, room "Home" for non-home items, return_by from the printed policy or ` +
+        `a well-known retailer policy (confidence "low"), and when return_by is set add a reminder titled ` +
+        `"Return window closes" due 3 days before it. Anything else → best effort, confidence "low".`;
     case "nameplate":
       return `${base} The image is an appliance nameplate / rating plate. ` +
         `Extract the brand and model into title (e.g. "Furnace — Lennox ML296V"), the serial into model_serial, ` +
