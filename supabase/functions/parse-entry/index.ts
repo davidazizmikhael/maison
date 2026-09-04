@@ -124,6 +124,57 @@ const geminiSchema = {
     "confidence", "reminders"],
 };
 
+/// Looks up a retailer's official customer-service contact with Google Search
+/// grounding. Best effort: any failure returns {} and the record ships without.
+async function lookupVendorContact(
+  apiKey: string,
+  vendor: string,
+  domain: string | null,
+): Promise<{ phone?: string; email?: string; domain?: string }> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 9000);
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            role: "user",
+            parts: [{
+              text: `Find the official customer service contact for the retailer or manufacturer "${vendor}"` +
+                (domain ? ` (website ${domain})` : "") +
+                ` for customers in Canada. Reply with ONLY a JSON object, no prose, no code fence: ` +
+                `{"phone": "<toll-free or main customer service number>" or null, ` +
+                `"email": "<customer service email>" or null, "domain": "<primary website domain>" or null}. ` +
+                `Only include values you actually found on official or authoritative pages; otherwise null.`,
+            }],
+          }],
+          tools: [{ google_search: {} }],
+        }),
+      },
+    );
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.error("vendor lookup", res.status, (await res.text()).slice(0, 200));
+      return {};
+    }
+    const data = await res.json();
+    const text: string = data?.candidates?.[0]?.content?.parts
+      ?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    const parsed = JSON.parse(match[0]);
+    const clean = (v: unknown) => (typeof v === "string" && v.trim() && v !== "null") ? v.trim() : undefined;
+    return { phone: clean(parsed.phone), email: clean(parsed.email), domain: clean(parsed.domain) };
+  } catch (e) {
+    console.error("vendor lookup failed", `${e}`.slice(0, 200));
+    return {};
+  }
+}
+
 async function parseWithGemini(
   apiKey: string,
   instruction: string,
@@ -296,6 +347,12 @@ Deno.serve(async (req) => {
         const parsed = await parseWithGemini(
           geminiKey!, instructionFor(mode, today), text, image_base64,
           media_type ?? "image/jpeg");
+        if (parsed.vendor && (!parsed.vendor_phone || !parsed.vendor_email || !parsed.vendor_domain)) {
+          const found = await lookupVendorContact(geminiKey!, parsed.vendor, parsed.vendor_domain);
+          parsed.vendor_phone ??= found.phone ?? null;
+          parsed.vendor_email ??= found.email ?? null;
+          parsed.vendor_domain ??= found.domain ?? null;
+        }
         const { reminders, ...record } = parsed;
         return new Response(JSON.stringify({ record, reminders }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

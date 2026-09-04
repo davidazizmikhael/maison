@@ -585,14 +585,28 @@ class _ComposeDockState extends State<_ComposeDock> {
           .showSnackBar(SnackBar(content: Text(context.l10n.voiceUnavailable)));
       return;
     }
+    final wantFrench = Localizations.localeOf(context).languageCode == 'fr';
+    final available = await _speech.locales();
+    if (!mounted) return;
+    String? pick(String lang, String preferred) {
+      final ids = available.map((l) => l.localeId.replaceAll('-', '_')).toList();
+      if (ids.contains(preferred)) return preferred;
+      return ids.cast<String?>().firstWhere((id) => id!.startsWith('${lang}_') || id == lang,
+          orElse: () => null);
+    }
+    final localeId = wantFrench ? pick('fr', 'fr_CA') : pick('en', 'en_CA');
+    if (wantFrench && localeId == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.voiceFrenchMissing)));
+    }
     setState(() => _listening = true);
-    final locale = Localizations.localeOf(context);
     await _speech.listen(
       listenOptions: SpeechListenOptions(
         partialResults: true,
-        localeId: locale.languageCode == 'fr' ? 'fr_CA' : 'en_CA',
+        localeId: localeId, // null = the phone's own dictation language
       ),
       onResult: (result) {
+        if (!_listening) return; // a late result after send/cancel must not reappear
         _controller
           ..text = result.recognizedWords
           ..selection = TextSelection.collapsed(offset: result.recognizedWords.length);
@@ -614,9 +628,14 @@ class _ComposeDockState extends State<_ComposeDock> {
     });
   }
 
-  void _send() {
+  Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    if (_listening) {
+      await _speech.cancel(); // discard pending results — they'd refill the field
+      _listening = false;
+    }
+    if (!mounted) return;
     fileCapture(context, CaptureMode.note, noteText: text);
     _controller.clear();
     _close();

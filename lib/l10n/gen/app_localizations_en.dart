@@ -699,4 +699,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listeningHint => 'Listening…';
+
+  @override
+  String get voiceFrenchMissing =>
+      'French dictation isn\'t installed on this phone — add it under Settings › General › Keyboard › Dictation Languages. Listening in your phone\'s language for now.';
 }

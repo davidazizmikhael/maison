@@ -1327,6 +1327,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Listening…'**
   String get listeningHint;
+
+  /// No description provided for @voiceFrenchMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'French dictation isn\'t installed on this phone — add it under Settings › General › Keyboard › Dictation Languages. Listening in your phone\'s language for now.'**
+  String get voiceFrenchMissing;
 }
 
 class _AppLocalizationsDelegate

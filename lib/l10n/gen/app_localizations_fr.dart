@@ -702,4 +702,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get listeningHint => 'J\'écoute…';
+
+  @override
+  String get voiceFrenchMissing =>
+      'La dictée en français n\'est pas installée sur ce téléphone — ajoutez-la dans Réglages › Général › Clavier › Langues de dictée. J\'écoute dans la langue du téléphone pour l\'instant.';
 }

@@ -344,5 +344,6 @@
   "statNextDue": "next due",
   "statNone": "—",
   "voiceUnavailable": "Voice input isn't available on this device.",
-  "listeningHint": "Listening…"
+  "listeningHint": "Listening…",
+  "voiceFrenchMissing": "French dictation isn't installed on this phone — add it under Settings › General › Keyboard › Dictation Languages. Listening in your phone's language for now."
 }
