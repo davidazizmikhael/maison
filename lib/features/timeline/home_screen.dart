@@ -547,6 +547,11 @@ class _ComposeDock extends StatefulWidget {
   State<_ComposeDock> createState() => _ComposeDockState();
 }
 
+/// Floating-control surface: sits visibly above the cards in both themes.
+Color _floatSurface(BuildContext context) => Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFF34322C)
+    : context.mc.card;
+
 class _ComposeDockState extends State<_ComposeDock> {
   bool _composing = false;
   bool _listening = false;
@@ -619,9 +624,19 @@ class _ComposeDockState extends State<_ComposeDock> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      // No background: the row floats over whatever is scrolled beneath it.
-      padding: EdgeInsets.fromLTRB(16, 10, 16, _composing ? 10 : 12),
+    final paper = context.mc.paper;
+    return Container(
+      // No solid bar: a short fade so items dim as they slide under the row,
+      // which keeps the controls legible over cards of the same tone.
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [paper.withValues(alpha: 0), paper.withValues(alpha: 0.9), paper],
+          stops: const [0, 0.45, 1],
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(16, 34, 16, _composing ? 10 : 12),
       child: SafeArea(
         top: false,
         child: _composing
@@ -630,8 +645,9 @@ class _ComposeDockState extends State<_ComposeDock> {
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
                     decoration: BoxDecoration(
-                      color: context.mc.card,
+                      color: _floatSurface(context),
                       borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: context.mc.line),
                       boxShadow: [
                         BoxShadow(
                             color: Colors.black.withValues(alpha: 0.08),
@@ -694,7 +710,8 @@ class _ComposeDockState extends State<_ComposeDock> {
                     height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: context.mc.card,
+                      color: _floatSurface(context),
+                      border: Border.all(color: context.mc.line),
                       boxShadow: [
                         BoxShadow(
                             color: Colors.black.withValues(alpha: 0.08),
@@ -733,7 +750,7 @@ class _KeyboardButton extends StatelessWidget {
         height: 52,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: context.mc.card,
+          color: _floatSurface(context),
           border: Border.all(color: context.mc.line),
           boxShadow: [
             BoxShadow(
