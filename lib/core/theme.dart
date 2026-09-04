@@ -116,6 +116,8 @@ ThemeData maisonTheme(Brightness brightness) {
       backgroundColor: p.paper,
       foregroundColor: p.ink,
       elevation: 0,
+      scrolledUnderElevation: 0, // no M3 tint shift when the list scrolls under
+      surfaceTintColor: Colors.transparent,
       centerTitle: false,
       titleTextStyle: TextStyle(color: p.ink, fontSize: 18, fontWeight: FontWeight.w800),
     ),
