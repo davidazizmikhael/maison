@@ -359,13 +359,18 @@ Deno.serve(async (req) => {
         });
       } catch (err) {
         const status = (err as { status?: number }).status ?? 500;
-        // Free-tier RPM/RPD limits surface as 429 — the app shows the
-        // friendly rate message rather than a raw error.
-        return new Response(
-          JSON.stringify({ error: status === 429 ? "rate_limited" : `AI service error (${status})` }),
-          { status: status === 429 ? 429 : 502,
-            headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        // Gemini's free tier is tiny (20 requests/day on 3.8 Flash). When it's
+        // exhausted or overloaded and an Anthropic key exists, fall through to
+        // Anthropic instead of failing the capture.
+        const exhausted = status === 429 || status === 503;
+        if (!(exhausted && anthropicKey)) {
+          return new Response(
+            JSON.stringify({ error: status === 429 ? "rate_limited" : `AI service error (${status})` }),
+            { status: status === 429 ? 429 : 502,
+              headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        console.warn("gemini unavailable", status, "— falling back to anthropic");
       }
     }
 
