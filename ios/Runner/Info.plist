@@ -38,6 +38,10 @@
 		<string>tel</string>
 		<string>mailto</string>
 	</array>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Maison turns what you say into a home record, so you can log by voice.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone is used only while you dictate a note.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Maison uses the camera to snap appliance nameplates and receipts so AI can file them for you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

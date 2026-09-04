@@ -680,4 +680,26 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get stepDecidingKind => 'Plaque ou reçu ? Je décide…';
+
+  @override
+  String get statRecords => 'dossiers';
+
+  @override
+  String get statCovered => 'couverts';
+
+  @override
+  String get statSpent => 'dépensés';
+
+  @override
+  String get statNextDue => 'prochain';
+
+  @override
+  String get statNone => '—';
+
+  @override
+  String get voiceUnavailable =>
+      'La saisie vocale n\'est pas disponible sur cet appareil.';
+
+  @override
+  String get listeningHint => 'J\'écoute…';
 }

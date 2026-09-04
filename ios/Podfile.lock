@@ -3,6 +3,9 @@ PODS:
     - Flutter
   - camera_avfoundation (0.0.1):
     - Flutter
+  - CwlCatchException (2.2.1):
+    - CwlCatchExceptionSupport (~> 2.2.1)
+  - CwlCatchExceptionSupport (2.2.1)
   - Flutter (1.0.0)
   - flutter_local_notifications (0.0.1):
     - Flutter
@@ -29,6 +32,10 @@ PODS:
   - sign_in_with_apple (0.0.1):
     - Flutter
     - FlutterMacOS
+  - speech_to_text (7.2.0):
+    - CwlCatchException
+    - Flutter
+    - FlutterMacOS
   - url_launcher_ios (0.0.1):
     - Flutter
 
@@ -46,10 +53,13 @@ DEPENDENCIES:
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/darwin`)
+  - speech_to_text (from `.symlinks/plugins/speech_to_text/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
 
 SPEC REPOS:
   trunk:
+    - CwlCatchException
+    - CwlCatchExceptionSupport
     - Sentry
 
 EXTERNAL SOURCES:
@@ -79,12 +89,16 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   sign_in_with_apple:
     :path: ".symlinks/plugins/sign_in_with_apple/darwin"
+  speech_to_text:
+    :path: ".symlinks/plugins/speech_to_text/darwin"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
 
 SPEC CHECKSUMS:
   app_links: 6d01271b3907b0ee7325c5297c75d697c4226c4d
   camera_avfoundation: 769d252259fa21e39ada7399c9dc9c0921af8165
+  CwlCatchException: 7acc161b299a6de7f0a46a6ed741eae2c8b4d75a
+  CwlCatchExceptionSupport: 54ccab8d8c78907b57f99717fb19d4cc3bce02dc
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_local_notifications: eda81afddbf18f8589f6ec069ce593c4c6378769
   flutter_timezone: ac3da59ac941ff1c98a2e1f0293420e020120282
@@ -97,6 +111,7 @@ SPEC CHECKSUMS:
   share_plus: 8b6f8b3447e494cca5317c8c3073de39b3600d1f
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
   sign_in_with_apple: fb98447f3dfb81e2926945ea43a8c9c7205eaca9
+  speech_to_text: 87bf9298952e8d9073be1b6aade6d5758db5170c
   url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../core/l10n_ext.dart';
 import '../../core/motion.dart';
@@ -121,7 +122,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _HealthHero(score: score, pendingCount: state.pending.length),
+                _HealthHero(score: score, state: state),
                 if (state.pending.isNotEmpty || completedPreview.isNotEmpty) ...[
                   const SizedBox(height: 22),
                   _SectionLabel(context.l10n.sectionUpNext),
@@ -210,13 +211,41 @@ class _SectionLabel extends StatelessWidget {
 /// Dark hero card with a ring that draws itself to the health score.
 /// Permanently-dark brand surface, same in both themes.
 class _HealthHero extends StatelessWidget {
-  const _HealthHero({required this.score, required this.pendingCount});
+  const _HealthHero({required this.score, required this.state});
   final int score;
-  final int pendingCount;
+  final TimelineState state;
+
+  static String _money(double v) =>
+      v >= 1000 ? '\$${(v / 1000).toStringAsFixed(1)}K' : '\$${v.round()}';
+
+  Widget _stat(String value, String label) {
+    return Expanded(
+      child: Column(children: [
+        Text(value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
+        const SizedBox(height: 1),
+        Text(label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 10.5, color: Color(0xFFA8B0BD), letterSpacing: 0.3)),
+      ]),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final pendingCount = state.pending.length;
+    final spent = state.records.fold<double>(0, (sum, r) => sum + (r.cost ?? 0));
+    final next = state.pending.isEmpty ? null : state.pending.first.daysLeft;
+    final nextLabel = next == null
+        ? l10n.statNone
+        : next <= 0
+            ? l10n.statToday
+            : l10n.statDays(next);
     final title = score >= 85
         ? l10n.healthGreat
         : score >= 60
@@ -229,7 +258,8 @@ class _HealthHero extends StatelessWidget {
         color: MaisonColors.ink,
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Row(children: [
+      child: Column(children: [
+        Row(children: [
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: score / 100),
           duration: const Duration(milliseconds: 1200),
@@ -259,6 +289,16 @@ class _HealthHero extends StatelessWidget {
                 style: const TextStyle(fontSize: 13, color: Color(0xFFA8B0BD), height: 1.4)),
           ]),
         ),
+        ]),
+        const SizedBox(height: 16),
+        Container(height: 1, color: const Color(0xFF2E3644)),
+        const SizedBox(height: 12),
+        Row(children: [
+          _stat('${state.records.length}', l10n.statRecords),
+          _stat('${state.activeWarranties}', l10n.statCovered),
+          _stat(spent > 0 ? _money(spent) : l10n.statNone, l10n.statSpent),
+          _stat(nextLabel, l10n.statNextDue),
+        ]),
       ]),
     );
   }
@@ -509,14 +549,50 @@ class _ComposeDock extends StatefulWidget {
 
 class _ComposeDockState extends State<_ComposeDock> {
   bool _composing = false;
+  bool _listening = false;
   final _controller = TextEditingController();
   final _focus = FocusNode();
+  final _speech = SpeechToText();
 
   @override
   void dispose() {
+    _speech.stop();
     _controller.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  /// Voice dictation straight into the field (system speech recognition).
+  Future<void> _toggleMic() async {
+    if (_listening) {
+      await _speech.stop();
+      if (mounted) setState(() => _listening = false);
+      return;
+    }
+    final ok = await _speech.initialize(onStatus: (status) {
+      if (status == 'done' || status == 'notListening') {
+        if (mounted) setState(() => _listening = false);
+      }
+    });
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.voiceUnavailable)));
+      return;
+    }
+    setState(() => _listening = true);
+    final locale = Localizations.localeOf(context);
+    await _speech.listen(
+      listenOptions: SpeechListenOptions(
+        partialResults: true,
+        localeId: locale.languageCode == 'fr' ? 'fr_CA' : 'en_CA',
+      ),
+      onResult: (result) {
+        _controller
+          ..text = result.recognizedWords
+          ..selection = TextSelection.collapsed(offset: result.recognizedWords.length);
+      },
+    );
   }
 
   void _open() {
@@ -525,8 +601,12 @@ class _ComposeDockState extends State<_ComposeDock> {
   }
 
   void _close() {
+    _speech.stop();
     _focus.unfocus();
-    setState(() => _composing = false);
+    setState(() {
+      _composing = false;
+      _listening = false;
+    });
   }
 
   void _send() {
@@ -540,46 +620,57 @@ class _ComposeDockState extends State<_ComposeDock> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: context.mc.paper,
-        border: _composing ? Border(top: BorderSide(color: context.mc.line)) : null,
-      ),
+      color: context.mc.paper,
       padding: EdgeInsets.fromLTRB(16, 10, 16, _composing ? 10 : 12),
       child: SafeArea(
         top: false,
         child: _composing
             ? Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                GestureDetector(
-                  onTap: _close,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 12, 10, 12),
-                    child: Icon(Icons.close, size: 22, color: context.mc.inkSoft),
-                  ),
-                ),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
                     decoration: BoxDecoration(
                       color: context.mc.card,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: context.mc.line),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6)),
+                      ],
                     ),
-                    child: TextField(
-                      key: const Key('compose-input'),
-                      controller: _controller,
-                      focusNode: _focus,
-                      minLines: 1,
-                      maxLines: 4,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _send(),
-                      style: const TextStyle(fontSize: 16, height: 1.4),
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        isCollapsed: true,
-                        hintText: context.l10n.composePlaceholder,
-                        hintStyle: TextStyle(color: context.mc.inkSoft),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      Expanded(
+                        child: TextField(
+                          key: const Key('compose-input'),
+                          controller: _controller,
+                          focusNode: _focus,
+                          minLines: 1,
+                          maxLines: 4,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(),
+                          style: const TextStyle(fontSize: 17, height: 1.35),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            isCollapsed: true,
+                            hintText: _listening
+                                ? context.l10n.listeningHint
+                                : context.l10n.composePlaceholder,
+                            hintStyle: TextStyle(color: context.mc.inkSoft),
+                          ),
+                        ),
                       ),
-                    ),
+                      GestureDetector(
+                        key: const Key('compose-mic'),
+                        onTap: _toggleMic,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Icon(_listening ? Icons.mic : Icons.mic_none_outlined,
+                              size: 22,
+                              color: _listening ? context.mc.accent : context.mc.inkSoft),
+                        ),
+                      ),
+                    ]),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -587,11 +678,31 @@ class _ComposeDockState extends State<_ComposeDock> {
                   key: const Key('compose-send'),
                   onTap: _send,
                   child: Container(
-                    width: 44,
-                    height: 44,
+                    width: 52,
+                    height: 52,
                     decoration:
                         BoxDecoration(shape: BoxShape.circle, color: context.mc.accent),
-                    child: const Icon(Icons.arrow_upward, size: 22, color: Colors.white),
+                    child: const Icon(Icons.arrow_upward, size: 24, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  key: const Key('compose-dismiss'),
+                  onTap: _close,
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: context.mc.card,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6)),
+                      ],
+                    ),
+                    child: Icon(Icons.keyboard_hide_outlined, size: 24, color: context.mc.ink),
                   ),
                 ),
               ])

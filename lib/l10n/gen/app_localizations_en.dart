@@ -678,4 +678,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stepDecidingKind => 'Nameplate or receipt? Deciding…';
+
+  @override
+  String get statRecords => 'records';
+
+  @override
+  String get statCovered => 'covered';
+
+  @override
+  String get statSpent => 'filed';
+
+  @override
+  String get statNextDue => 'next due';
+
+  @override
+  String get statNone => '—';
+
+  @override
+  String get voiceUnavailable => 'Voice input isn\'t available on this device.';
+
+  @override
+  String get listeningHint => 'Listening…';
 }

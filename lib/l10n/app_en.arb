@@ -337,5 +337,12 @@
   "hintPhotoLive": "Frame the nameplate or the receipt — I'll work out which.",
   "hintPhotoDemo": "Frame a nameplate or a receipt — I'll work out which.\nDemo mode: a furnace nameplate is pre-loaded.",
   "stepLookingPhoto": "Looking at the photo…",
-  "stepDecidingKind": "Nameplate or receipt? Deciding…"
+  "stepDecidingKind": "Nameplate or receipt? Deciding…",
+  "statRecords": "records",
+  "statCovered": "covered",
+  "statSpent": "filed",
+  "statNextDue": "next due",
+  "statNone": "—",
+  "voiceUnavailable": "Voice input isn't available on this device.",
+  "listeningHint": "Listening…"
 }

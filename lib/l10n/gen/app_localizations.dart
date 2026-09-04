@@ -1285,6 +1285,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nameplate or receipt? Deciding…'**
   String get stepDecidingKind;
+
+  /// No description provided for @statRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'records'**
+  String get statRecords;
+
+  /// No description provided for @statCovered.
+  ///
+  /// In en, this message translates to:
+  /// **'covered'**
+  String get statCovered;
+
+  /// No description provided for @statSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'filed'**
+  String get statSpent;
+
+  /// No description provided for @statNextDue.
+  ///
+  /// In en, this message translates to:
+  /// **'next due'**
+  String get statNextDue;
+
+  /// No description provided for @statNone.
+  ///
+  /// In en, this message translates to:
+  /// **'—'**
+  String get statNone;
+
+  /// No description provided for @voiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice input isn\'t available on this device.'**
+  String get voiceUnavailable;
+
+  /// No description provided for @listeningHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening…'**
+  String get listeningHint;
 }
 
 class _AppLocalizationsDelegate

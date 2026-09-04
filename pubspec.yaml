@@ -54,6 +54,7 @@ dependencies:
   share_plus: ^13.3.0
   path_provider: ^2.1.6
   url_launcher: ^6.3.2
+  speech_to_text: ^7.4.0
 
 dev_dependencies:
   flutter_test:
