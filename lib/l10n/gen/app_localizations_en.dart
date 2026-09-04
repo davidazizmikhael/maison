@@ -661,4 +661,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reviewAction => 'Review';
+
+  @override
+  String get composePlaceholder => 'Type it like a text…';
+
+  @override
+  String get hintPhotoLive =>
+      'Frame the nameplate or the receipt — I\'ll work out which.';
+
+  @override
+  String get hintPhotoDemo =>
+      'Frame a nameplate or a receipt — I\'ll work out which.\nDemo mode: a furnace nameplate is pre-loaded.';
+
+  @override
+  String get stepLookingPhoto => 'Looking at the photo…';
+
+  @override
+  String get stepDecidingKind => 'Nameplate or receipt? Deciding…';
 }

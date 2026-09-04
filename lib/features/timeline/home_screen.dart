@@ -89,14 +89,16 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(width: 8),
             ],
           ),
-          body: RefreshIndicator(
+          body: Column(children: [
+            Expanded(
+              child: RefreshIndicator(
             color: context.mc.accent,
             onRefresh: () async {
               if (homeId == null) return;
               await context.read<TimelineCubit>().load(homeId);
             },
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 110),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -178,23 +180,10 @@ class HomeScreen extends StatelessWidget {
                   ),
               ],
             ),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _KeyboardButton(
-                key: const Key('compose-field'),
-                onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const QuickNoteScreen())),
               ),
-              const SizedBox(width: 14),
-              _CameraButton(
-                key: const Key('compose-camera'),
-                onTap: () => startCapture(context, CaptureMode.nameplate),
-              ),
-            ],
-          ),
+            ),
+            const _ComposeDock(),
+          ]),
         );
       },
     );
@@ -508,6 +497,117 @@ class _RecordCard extends StatelessWidget {
   }
 }
 
+/// Bottom dock: idle shows keyboard + camera; tapping the keyboard turns the
+/// dock into an inline writing field right here on the home screen — the
+/// note files in place, no new page.
+class _ComposeDock extends StatefulWidget {
+  const _ComposeDock();
+
+  @override
+  State<_ComposeDock> createState() => _ComposeDockState();
+}
+
+class _ComposeDockState extends State<_ComposeDock> {
+  bool _composing = false;
+  final _controller = TextEditingController();
+  final _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _open() {
+    setState(() => _composing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
+  }
+
+  void _close() {
+    _focus.unfocus();
+    setState(() => _composing = false);
+  }
+
+  void _send() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    fileCapture(context, CaptureMode.note, noteText: text);
+    _controller.clear();
+    _close();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.mc.paper,
+        border: _composing ? Border(top: BorderSide(color: context.mc.line)) : null,
+      ),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, _composing ? 10 : 12),
+      child: SafeArea(
+        top: false,
+        child: _composing
+            ? Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                GestureDetector(
+                  onTap: _close,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 12, 10, 12),
+                    child: Icon(Icons.close, size: 22, color: context.mc.inkSoft),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: context.mc.card,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: context.mc.line),
+                    ),
+                    child: TextField(
+                      key: const Key('compose-input'),
+                      controller: _controller,
+                      focusNode: _focus,
+                      minLines: 1,
+                      maxLines: 4,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                      style: const TextStyle(fontSize: 16, height: 1.4),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        isCollapsed: true,
+                        hintText: context.l10n.composePlaceholder,
+                        hintStyle: TextStyle(color: context.mc.inkSoft),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  key: const Key('compose-send'),
+                  onTap: _send,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration:
+                        BoxDecoration(shape: BoxShape.circle, color: context.mc.accent),
+                    child: const Icon(Icons.arrow_upward, size: 22, color: Colors.white),
+                  ),
+                ),
+              ])
+            : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                _KeyboardButton(key: const Key('compose-field'), onTap: _open),
+                const SizedBox(width: 14),
+                _CameraButton(
+                  key: const Key('compose-camera'),
+                  onTap: () => startCapture(context),
+                ),
+              ]),
+      ),
+    );
+  }
+}
+
 /// Secondary bottom button: type instead of snap.
 class _KeyboardButton extends StatelessWidget {
   const _KeyboardButton({super.key, required this.onTap});
@@ -569,6 +669,9 @@ class _ParsingCardState extends State<_ParsingCard> {
   List<String> _steps(BuildContext context) {
     final l = context.l10n;
     return switch (widget.task.mode) {
+      CaptureMode.photo => [
+          l.stepLookingPhoto, l.stepDecidingKind, l.stepExtractingDetails, l.stepReadingWarranty
+        ],
       CaptureMode.nameplate => [
           l.stepReadingNameplate, l.stepIdentifyingModel, l.stepFindingManual, l.stepCheckingRecalls
         ],

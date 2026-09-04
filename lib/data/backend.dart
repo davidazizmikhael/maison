@@ -217,6 +217,7 @@ class SupabaseBackend implements Backend {
       {String? noteText, Uint8List? imageBytes, String mediaType = 'image/jpeg'}) async {
     final res = await _db.functions.invoke('parse-entry', body: {
       'mode': switch (mode) {
+        CaptureMode.photo => 'photo',
         CaptureMode.nameplate => 'nameplate',
         CaptureMode.receipt => 'receipt',
         CaptureMode.note => 'note',

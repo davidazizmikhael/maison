@@ -332,5 +332,10 @@
   "discardButton": "Discard",
   "filedSnack": "Filed ✓",
   "filedCheckSnack": "Filed — I wasn't sure about everything. Worth a look.",
-  "reviewAction": "Review"
+  "reviewAction": "Review",
+  "composePlaceholder": "Type it like a text…",
+  "hintPhotoLive": "Frame the nameplate or the receipt — I'll work out which.",
+  "hintPhotoDemo": "Frame a nameplate or a receipt — I'll work out which.\nDemo mode: a furnace nameplate is pre-loaded.",
+  "stepLookingPhoto": "Looking at the photo…",
+  "stepDecidingKind": "Nameplate or receipt? Deciding…"
 }

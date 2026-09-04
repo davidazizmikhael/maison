@@ -206,5 +206,10 @@
   "discardButton": "Ignorer",
   "filedSnack": "Classé ✓",
   "filedCheckSnack": "Classé — je n'étais pas sûr de tout. Un coup d'œil s'impose.",
-  "reviewAction": "Vérifier"
+  "reviewAction": "Vérifier",
+  "composePlaceholder": "Écrivez-le comme un texto…",
+  "hintPhotoLive": "Cadrez la plaque ou le reçu — je détermine lequel.",
+  "hintPhotoDemo": "Cadrez une plaque ou un reçu — je détermine lequel.\nMode démo : une plaque de fournaise est préchargée.",
+  "stepLookingPhoto": "J'examine la photo…",
+  "stepDecidingKind": "Plaque ou reçu ? Je décide…"
 }

@@ -25,6 +25,7 @@ void main() {
     final end = DateTime.now().add(timeout);
     while (finder.evaluate().isEmpty) {
       if (DateTime.now().isAfter(end)) {
+        await binding.takeScreenshot('zz-timeout'); // what the screen really showed
         throw TimeoutException('Timed out waiting for $finder');
       }
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 250)));
@@ -71,14 +72,18 @@ void main() {
     await waitFor(tester, find.byKey(const Key('capture')));
     // Regression: the sheet was once sized from its caller's tiny render box.
     expect(tester.getSize(find.byType(CaptureSheet)).height, greaterThan(400));
-    expect(find.byKey(const Key('mode-receipt')), findsOneWidget);
     await shot(tester, '05-capture-sheet');
     await tester.tap(find.byKey(const Key('capture')));
     // No pumpAndSettle here: the parsing card's spinner never settles.
     await tester.pump(const Duration(milliseconds: 500));
     await binding.takeScreenshot('06-parsing-in-place');
-    await waitFor(tester, find.text('Furnace — Lennox ML296V')); // filed, no screens in between
+    // Filed, no screens in between. The rail may sit below the fold (lazy
+    // list), so anchor on the toast, then scroll the rail into the tree.
+    await waitFor(tester, find.text('Filed ✓'));
     await tester.pumpAndSettle();
+    await tester.fling(find.byType(ListView).first, const Offset(0, -700), 2000);
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('Furnace — Lennox ML296V'));
     await shot(tester, '07-home-after-file');
 
     // 4 — Corrections happen on the record itself: detail → Edit.
@@ -129,16 +134,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Return window closes'), findsOneWidget);
 
-    // 5 — Keyboard button → quick note → "File it" → parses in place on home
+    // 5 — Keyboard button → inline compose field (same screen) → send →
+    // the note parses in place on home
     await tester.pump(const Duration(seconds: 4)); // corrections snackbar
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('compose-field')));
     await tester.pumpAndSettle();
-    await shot(tester, '10-quick-note');
-    await tester.tap(find.text('File it'));
-    await tester.pump(const Duration(milliseconds: 300));
-    await waitFor(tester, find.text('Bathroom faucet repair'));
+    await tester.enterText(find.byKey(const Key('compose-input')),
+        'Fixed the leaky bathroom faucet, Moen cartridge, \$38 at Réno-Dépôt');
     await tester.pumpAndSettle();
+    await shot(tester, '10-inline-compose');
+    await tester.tap(find.byKey(const Key('compose-send')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await waitFor(tester, find.text('Filed ✓'));
+    await tester.pumpAndSettle();
+    await tester.fling(find.byType(ListView).first, const Offset(0, -700), 2000);
+    await tester.pumpAndSettle();
+    await waitFor(tester, find.text('Bathroom faucet repair'));
     await shot(tester, '11-home-after-note');
 
     // 6b — Delete the note record from its detail screen (snackbar again)
@@ -207,7 +219,7 @@ void main() {
     await tester.tap(find.text('Français'));
     await tester.pumpAndSettle();
     await waitFor(tester, find.text('À VENIR'));
-    expect(find.text('CLASSÉS RÉCEMMENT'), findsOneWidget);
+    expect(find.text('Bonjour'), findsOneWidget); // greeting is always above the fold
     await shot(tester, '16-home-french');
     await tester.tap(find.byIcon(Icons.language));
     await tester.pumpAndSettle();

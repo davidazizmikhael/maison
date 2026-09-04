@@ -1255,6 +1255,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Review'**
   String get reviewAction;
+
+  /// No description provided for @composePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Type it like a text…'**
+  String get composePlaceholder;
+
+  /// No description provided for @hintPhotoLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Frame the nameplate or the receipt — I\'ll work out which.'**
+  String get hintPhotoLive;
+
+  /// No description provided for @hintPhotoDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Frame a nameplate or a receipt — I\'ll work out which.\nDemo mode: a furnace nameplate is pre-loaded.'**
+  String get hintPhotoDemo;
+
+  /// No description provided for @stepLookingPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking at the photo…'**
+  String get stepLookingPhoto;
+
+  /// No description provided for @stepDecidingKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Nameplate or receipt? Deciding…'**
+  String get stepDecidingKind;
 }
 
 class _AppLocalizationsDelegate

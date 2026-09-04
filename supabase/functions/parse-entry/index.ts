@@ -84,6 +84,7 @@ function fallbackParse(mode: string, text: string | undefined, today: Date) {
       reminders: [],
     },
   } as const;
+  if (mode === "photo") return base.nameplate;
   return base[(mode as keyof typeof base)] ?? base.note;
 }
 
@@ -153,10 +154,12 @@ async function parseWithGemini(
   };
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  // Free-tier demand spikes (503) are frequent but short — back off and retry
+  // a few times before giving up; the app's card offers a manual retry after.
   let res = await fetch(url, request);
-  if (res.status === 503) {
-    // Free-tier demand spikes are transient — one retry usually clears them.
-    await new Promise((r) => setTimeout(r, 1500));
+  for (const delayMs of [1500, 3000, 5000]) {
+    if (res.status !== 503) break;
+    await new Promise((r) => setTimeout(r, delayMs));
     res = await fetch(url, request);
   }
   if (!res.ok) {
@@ -185,7 +188,25 @@ function instructionFor(mode: string, today: string): string {
     `vendor_phone / vendor_email / vendor_domain (domain only, e.g. "canadiantire.ca"). For a well-known ` +
     `retailer or manufacturer you may fill vendor_domain from knowledge, and vendor_phone ONLY when you are ` +
     `certain of its widely published customer-service number — NEVER guess digits or invent an email; use null.`;
+  const nameplateRules =
+    `Nameplate / rating plate: extract the brand and model into title (e.g. "Furnace — Lennox ML296V"), ` +
+    `the serial into model_serial, kind is "appliance". Infer the room from the appliance type ` +
+    `(furnace/water heater → Basement, etc.). Estimate warranty_until from typical manufacturer terms ` +
+    `only when the label states them; otherwise null.`;
+  const receiptRules =
+    `Receipt / invoice — ANY retail purchase counts, not just home items: clothing, shoes, electronics, gifts. ` +
+    `Extract the main item into title, total price into cost, the store/contractor into vendor. ` +
+    `kind is "receipt" for store purchases or "service" for contractor work. For non-home items use room "Home". ` +
+    `Estimate warranty_until from any stated warranty terms. For return_by: use the return policy printed on the ` +
+    `receipt; when none is printed but the retailer's standard policy is widely known (e.g. 30 days), use it and ` +
+    `set confidence "low"; otherwise null. When return_by is set, ALWAYS include a reminder titled like ` +
+    `"Return window closes" due 3 days before return_by so the buyer can still act on it.`;
   switch (mode) {
+    case "photo":
+      return `${base} The image is a photo the homeowner just took. FIRST decide what it shows: an appliance ` +
+        `nameplate/rating plate, a purchase receipt or invoice, or something else (a product box, a manual cover, ` +
+        `a repair in progress). Then apply the matching rules. ${nameplateRules} ${receiptRules} ` +
+        `If it is neither, describe the item as best you can with kind "service" or "appliance" and confidence "low".`;
     case "nameplate":
       return `${base} The image is an appliance nameplate / rating plate. ` +
         `Extract the brand and model into title (e.g. "Furnace — Lennox ML296V"), the serial into model_serial, ` +

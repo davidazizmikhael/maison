@@ -663,4 +663,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reviewAction => 'Vérifier';
+
+  @override
+  String get composePlaceholder => 'Écrivez-le comme un texto…';
+
+  @override
+  String get hintPhotoLive =>
+      'Cadrez la plaque ou le reçu — je détermine lequel.';
+
+  @override
+  String get hintPhotoDemo =>
+      'Cadrez une plaque ou un reçu — je détermine lequel.\nMode démo : une plaque de fournaise est préchargée.';
+
+  @override
+  String get stepLookingPhoto => 'J\'examine la photo…';
+
+  @override
+  String get stepDecidingKind => 'Plaque ou reçu ? Je décide…';
 }

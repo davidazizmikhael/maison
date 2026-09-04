@@ -28,8 +28,9 @@ void fileCapture(BuildContext context, CaptureMode mode,
       );
 }
 
-/// Camera button flow: open the sheet, then file whatever comes back.
-Future<void> startCapture(BuildContext context, CaptureMode mode) async {
+/// Camera button flow: open the sheet, then file whatever comes back. The
+/// AI works out nameplate vs receipt itself — no mode to pick.
+Future<void> startCapture(BuildContext context, [CaptureMode mode = CaptureMode.photo]) async {
   final result = await showCaptureSheet(context, mode);
   if (result == null || !context.mounted) return;
   fileCapture(context, result.mode, imageBytes: result.bytes);
@@ -65,7 +66,7 @@ class CaptureSheet extends StatefulWidget {
 }
 
 class _CaptureSheetState extends State<CaptureSheet> {
-  late CaptureMode _mode = widget.mode;
+  late final CaptureMode _mode = widget.mode;
   CameraController? _controller;
   bool _initializing = BackendConfig.enabled;
   bool _shooting = false;
@@ -171,26 +172,6 @@ class _CaptureSheetState extends State<CaptureSheet> {
     );
   }
 
-  Widget _modeChip(String label, CaptureMode mode) {
-    final selected = _mode == mode;
-    return GestureDetector(
-      key: Key('mode-${mode.name}'),
-      onTap: () => setState(() => _mode = mode),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: selected ? MaisonColors.ink : Colors.white)),
-      ),
-    );
-  }
-
   Widget _viewfinder(BuildContext context, bool isNameplate) {
     final controller = _controller;
     if (controller != null && controller.value.isInitialized) {
@@ -222,16 +203,18 @@ class _CaptureSheetState extends State<CaptureSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(isNameplate ? '🏷️' : '🧾', style: const TextStyle(fontSize: 64)),
+            Icon(Icons.center_focus_weak, size: 56, color: Colors.white.withValues(alpha: 0.8)),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
                 _cameraError != null
                     ? context.l10n.cameraUnavailable(_cameraError!)
-                    : (isNameplate
-                        ? context.l10n.hintNameplateDemo
-                        : context.l10n.hintReceiptDemo),
+                    : _mode == CaptureMode.photo
+                        ? context.l10n.hintPhotoDemo
+                        : (isNameplate
+                            ? context.l10n.hintNameplateDemo
+                            : context.l10n.hintReceiptDemo),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.75), fontSize: 14, height: 1.5),
@@ -255,27 +238,9 @@ class _CaptureSheetState extends State<CaptureSheet> {
           fit: StackFit.expand,
           children: [
             _viewfinder(context, isNameplate),
-            Positioned(
-              top: 14,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    _modeChip(context.l10n.modeNameplate, CaptureMode.nameplate),
-                    _modeChip(context.l10n.modeReceipt, CaptureMode.receipt),
-                  ]),
-                ),
-              ),
-            ),
             if (cameraLive)
               Positioned(
-                top: 62,
+                top: 14,
                 left: 24,
                 right: 24,
                 child: Container(
@@ -285,7 +250,11 @@ class _CaptureSheetState extends State<CaptureSheet> {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    (isNameplate ? context.l10n.hintNameplateLive : context.l10n.hintReceiptLive)
+                    (_mode == CaptureMode.photo
+                            ? context.l10n.hintPhotoLive
+                            : isNameplate
+                                ? context.l10n.hintNameplateLive
+                                : context.l10n.hintReceiptLive)
                         .replaceAll('\n', ' '),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white, fontSize: 12.5, height: 1.35),
@@ -340,106 +309,3 @@ class _CaptureSheetState extends State<CaptureSheet> {
   }
 }
 
-/// Notes-style "New entry": borderless writing surface, quiet scan chips.
-class QuickNoteScreen extends StatefulWidget {
-  const QuickNoteScreen({super.key});
-  @override
-  State<QuickNoteScreen> createState() => _QuickNoteScreenState();
-}
-
-class _QuickNoteScreenState extends State<QuickNoteScreen> {
-  final _controller = TextEditingController(
-      text: 'Fixed the leaky bathroom faucet, Moen cartridge, \$38 at Réno-Dépôt');
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _file() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    fileCapture(context, CaptureMode.note, noteText: text);
-    Navigator.of(context).pop(); // the item is already parsing on the home screen
-  }
-
-  Widget _scanChip(BuildContext context, IconData icon, String label, CaptureMode mode) {
-    return GestureDetector(
-      onTap: () {
-        // Pop this screen first, then open the sheet from the navigator's own
-        // context — this screen's context is defunct once popped.
-        final nav = Navigator.of(context);
-        nav.pop();
-        startCapture(nav.context, mode);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-        decoration: BoxDecoration(
-          border: Border.all(color: context.mc.line),
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 17, color: context.mc.navy),
-          const SizedBox(width: 8),
-          Text(label, style: TextStyle(fontSize: 14, color: context.mc.navy)),
-        ]),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 52,
-        automaticallyImplyLeading: false,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Text(context.l10n.cancelButton,
-                  style: TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w400, color: context.mc.inkSoft)),
-            ),
-            Text(context.l10n.newEntryTitle,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-            GestureDetector(
-              onTap: _file,
-              child: Text(context.l10n.fileIt,
-                  style: TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w700, color: context.mc.accent)),
-            ),
-          ],
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _controller,
-              maxLines: 5,
-              minLines: 1,
-              autofocus: true,
-              style: const TextStyle(fontSize: 19, height: 1.45, letterSpacing: -0.2),
-              decoration: const InputDecoration(border: InputBorder.none, isCollapsed: true),
-            ),
-            const SizedBox(height: 12),
-            Text(context.l10n.quickNoteHint,
-                style: TextStyle(fontSize: 13, color: context.mc.inkSoft, height: 1.5)),
-            const SizedBox(height: 24),
-            Wrap(spacing: 10, runSpacing: 10, children: [
-              _scanChip(context, Icons.photo_camera_outlined, context.l10n.optionNameplate,
-                  CaptureMode.nameplate),
-              _scanChip(context, Icons.receipt_long_outlined, context.l10n.optionReceipt,
-                  CaptureMode.receipt),
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-}

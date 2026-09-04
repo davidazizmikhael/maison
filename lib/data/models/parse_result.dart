@@ -1,8 +1,9 @@
 import 'home_record.dart';
 import 'reminder.dart';
 
-/// How the user is capturing this entry.
-enum CaptureMode { nameplate, receipt, note }
+/// How the user is capturing this entry. [photo] is the camera default: the
+/// AI decides whether it's looking at a nameplate or a receipt.
+enum CaptureMode { photo, nameplate, receipt, note }
 
 /// A structured result from the AI (or its demo stand-in).
 class ParseResult {

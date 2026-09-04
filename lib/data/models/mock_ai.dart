@@ -8,6 +8,7 @@ class MockAi {
   static ParseResult parse(CaptureMode mode, {String? noteText}) {
     final now = DateTime.now();
     switch (mode) {
+      case CaptureMode.photo:
       case CaptureMode.nameplate:
         return ParseResult(
           steps: ['Reading nameplate…', 'Identifying model…', 'Finding the manual…', 'Checking recalls…'],
