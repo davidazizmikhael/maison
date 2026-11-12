@@ -1,9 +1,21 @@
 # Maison
 
+[![CI](https://github.com/davidazizmikhael/maison/actions/workflows/ci.yml/badge.svg)](https://github.com/davidazizmikhael/maison/actions/workflows/ci.yml)
+
 The AI logbook for everything in your home. Snap a nameplate, a receipt, or
 type a note — Maison structures it into your house's permanent record:
 warranties, manuals, maintenance reminders, and exportable documents for
 claims, insurance, and resale.
+
+## Screenshots
+
+| Onboarding | Home | Capture | Filed |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/images/onboarding.jpg" width="190" alt="Onboarding: three ways to log"> | <img src="docs/images/home.jpg" width="190" alt="Home dashboard with house score and upcoming reminders"> | <img src="docs/images/capture.jpg" width="190" alt="Capture sheet for a nameplate or receipt"> | <img src="docs/images/filed.jpg" width="190" alt="Home after a record is filed"> |
+
+| Record | Exports | Dark mode | French |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/images/record.jpg" width="190" alt="Record detail with warranty and manual"> | <img src="docs/images/exports.jpg" width="190" alt="Exports: warranty claim pack, insurance inventory, house history"> | <img src="docs/images/dark-mode.jpg" width="190" alt="Home dashboard in dark mode"> | <img src="docs/images/french.jpg" width="190" alt="Home dashboard in French"> |
 
 ## Stack
 
