@@ -4,11 +4,10 @@
 > authorized client id = com.davidazizmikhael.maison). The app-side entitlement
 > requires the paid Apple Developer account.
 
-> **Status (Aug 31, 2026):** project `YOUR_PROJECT_REF` (ca-central-1) is live —
-> schema pushed, anonymous sign-in enabled, `parse-entry` deployed. No
-> model provider key is set yet, so the function returns deterministic demo parses
-> (`"demo": true`). Setting the secret + redeploying flips on the real AI; no
-> app changes needed.
+> **Status:** the hosted project (ca-central-1) is live — schema pushed,
+> anonymous sign-in enabled, `parse-entry` deployed. Until a model provider key
+> is set, the function returns deterministic demo parses (`"demo": true`).
+> Setting the secret + redeploying flips on the real AI; no app changes needed.
 
 The backend lives in `supabase/`:
 
@@ -16,7 +15,8 @@ The backend lives in `supabase/`:
   row-level security (every row visible only to its owner), and a private
   `captures` storage bucket for nameplate/receipt photos.
 - `functions/parse-entry/` — the AI endpoint. Takes a photo (base64) or a text
-  note, calls the configured language model, returns a structured record + suggested reminders.
+  note, calls the configured language model, returns a structured record +
+  suggested reminders.
 
 The Flutter app talks to it through `lib/services/backend.dart`. With no
 credentials configured the app runs in **demo mode** (in-memory mock, exactly
@@ -46,20 +46,20 @@ what you've been testing). With credentials it switches to the real backend.
    Anonymous) — v1 uses frictionless anonymous auth, upgradeable to
    Apple/email later without losing data.
 
-4. **Set an AI key and deploy the function.** Two providers are supported;
-   the function picks Gemini when its key exists, the paid provider otherwise
-   (override with the `PARSE_PROVIDER` secret):
+4. **Set an AI key and deploy the function.** Two model providers are
+   supported; the function uses the free-tier one when its key exists and the
+   paid one otherwise (override with the `PARSE_PROVIDER` secret):
 
-   Free for demos — Gemini (aistudio.google.com → Get API key; ~10 req/min,
-   ~1,500/day; note: Google may use free-tier data to improve its models —
-   move to paid or revisit the privacy policy before real users):
+   Free tier, for demos (rate-limited; note: a free tier may use request data
+   to improve its models — move to paid or revisit the privacy policy before
+   real users):
 
    ```bash
    supabase secrets set GEMINI_API_KEY=your-key
    ```
 
-   Paid provider (minimum credits apply; models via
-   `PARSE_MODEL`, Gemini's via `GEMINI_MODEL`):
+   Paid provider (choose the model with `PARSE_MODEL`; the free-tier model
+   with `GEMINI_MODEL`):
 
    ```bash
    supabase secrets set ANTHROPIC_API_KEY=sk-ant-your-key
@@ -84,7 +84,7 @@ supabase start
 ```
 
 ```bash
-supabase functions serve parse-entry --env-file <(echo ANTHROPIC_API_KEY=sk-ant-your-key)
+supabase functions serve parse-entry --env-file <(echo GEMINI_API_KEY=your-key)
 ```
 
 `supabase start` prints a local URL + anon key you can pass as the
@@ -92,9 +92,9 @@ supabase functions serve parse-entry --env-file <(echo ANTHROPIC_API_KEY=sk-ant-
 
 ## Cost notes
 
-- The edge function defaults to the paid provider's most capable model for maximum extraction quality.
-  Once you have real test photos, benchmark cheaper models by setting the
-  `PARSE_MODEL` secret
-  — for simple label OCR it may be indistinguishable and ~5x cheaper per scan.
+- The edge function defaults to the paid provider's most capable model for
+  maximum extraction quality. Once you have real test photos, benchmark a
+  cheaper model by setting the `PARSE_MODEL` secret — for simple label OCR it
+  may be indistinguishable and several times cheaper per scan.
 - Supabase free tier covers development and early beta comfortably
   (500MB database, 1GB storage, 500K edge function calls/month).
