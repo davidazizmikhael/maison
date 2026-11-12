@@ -22,8 +22,9 @@ claims, insurance, and resale.
 - **App:** Flutter (iOS-first), `lib/`
 - **Backend:** Supabase (Postgres + auth + storage + edge functions), `supabase/`
   — see [BACKEND.md](BACKEND.md) for setup, deployment, and current status
-- **AI:** a large language model called from the `parse-entry` edge function (falls back to demo
-  parses until a provider key is configured, see BACKEND.md)
+- **AI:** a large language model called from the `parse-entry` edge function
+  (falls back to demo parses until a provider key is configured, see
+  [BACKEND.md](BACKEND.md))
 
 ## Run
 
@@ -56,8 +57,6 @@ flutter drive --driver=test_driver/integration_test.dart --target=integration_te
 ## Project docs
 
 - [BACKEND.md](BACKEND.md) — Supabase setup, schema, edge function, secrets
-- `Maison-Business-Concept.pdf` (on Desktop) — the business case, competitors,
-  revenue model
 
 ## v1 scope (hold the line)
 
